@@ -3,116 +3,143 @@ import "./App.css";
 
 const API_KEY = "8370f7e693e34a79bdd180327252510";
 
-// 한글 → 영어 변환 매핑
 const cityMap = {
   "서울": "Seoul",
-  "안산": "Ansan",
-  "안양": "Anyang",
-  "용인": "Yongin",
+  "부산": "Busan",
   "수원": "Suwon",
   "인천": "Incheon",
   "강릉": "Gangneung",
-  "부산": "Busan",
+  "안양": "Anyang",
+  "용인": "Yongin",
+  "안산": "Ansan",
   "오사카": "Osaka",
   "후쿠오카": "Fukuoka",
   "유후인": "Yufuin",
   "마쓰야마": "Matsuyama",
   "사포로": "Sapporo",
-  "나고야": "Nagoya"
+  "나고야": "Nagoya",
+  "도쿄": "Tokyo",
 };
 
-// ✅ 나비에-S 모델 (리듬 분석)
-function s_forecast_report(time, tempSeries) {
-  if (tempSeries.length < 2) return { state: "데이터 부족", desc: "예보 분석 불가" };
-  const mean = tempSeries.reduce((a, b) => a + b, 0) / tempSeries.length;
-  const std =
-    Math.sqrt(
-      tempSeries.map(t => Math.pow(t - mean, 2)).reduce((a, b) => a + b, 0) /
-      tempSeries.length
-    ) || 1;
-  const ratio = (tempSeries[tempSeries.length - 1] - mean) / std;
+// ──────────── 나비에 기반 S-리듬 모델 ────────────
+function simulateSNavier(initTemp, initHumidity, days = 10) {
+  const hours = days * 24;
+  const dt = 1;
+  const gamma = 0.04;
+  const alpha = 0.03;
+  const omega = (2 * Math.PI) / 24;
+  const beta = 10;
 
-  let state, desc;
-  if (ratio < -0.5) {
-    state = "안정 ☀️";
-    desc = "리듬이 평형을 유지하고 있습니다. 대체로 맑고 고요한 날씨가 예상됩니다.";
-  } else if (ratio < 0.5) {
-    state = "평형 🌤";
-    desc = "리듬이 완만한 진동 범위 내에 있습니다. 구름 많고 변화가 적은 하루가 예상됩니다.";
-  } else if (ratio < 1.5) {
-    state = "불안정 🌧";
-    desc = "리듬이 상승하고 있습니다. 오후 이후 대류 활동과 국지적 소나기가 가능성 있습니다.";
-  } else {
-    state = "폭풍 ⚡️";
-    desc = "리듬이 격렬하게 교호 중입니다. 강한 비나 돌풍 가능성이 있습니다.";
+  let rho = initTemp / 100; // 초기 밀도
+  const S = [];
+  const Tseries = [];
+  const Hseries = [];
+
+  for (let t = 0; t < hours; t++) {
+    const drho = -gamma * rho + alpha * Math.sin(omega * t);
+    rho += drho * dt;
+    const s = Math.abs(drho) ** 2;
+    S.push(s);
+
+    // 온도 변환
+    const temp = initTemp + beta * Math.sqrt(s) * Math.sin(omega * t);
+    Tseries.push(temp);
+
+    // 습도 변환
+    const hum = initHumidity + 5 * (Math.sin(omega * t + Math.PI / 3));
+    Hseries.push(Math.max(0, Math.min(100, hum)));
   }
 
-  return { state, desc };
+  const Tmax = Math.max(...Tseries);
+  const Tmin = Math.min(...Tseries);
+  const Tavg = Tseries.reduce((a, b) => a + b, 0) / Tseries.length;
+  const Havg = Hseries.reduce((a, b) => a + b, 0) / Hseries.length;
+
+  return { Tmax, Tmin, Tavg, Havg, Tseries, S };
+}
+
+function s_forecast_report(S) {
+  const mean = S.reduce((a, b) => a + b, 0) / S.length;
+  const std = Math.sqrt(S.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0) / S.length);
+  const ratio = (S[S.length - 1] - mean) / std;
+
+  if (ratio < -0.5)
+    return { state: "안정 ☀️", desc: "리듬이 평형을 유지하고 있습니다. 대체로 맑고 고요한 날씨." };
+  if (ratio < 0.5)
+    return { state: "평형 🌤", desc: "리듬이 완만한 진동 범위 내에 있습니다. 변화가 적은 하루." };
+  if (ratio < 1.5)
+    return { state: "불안정 🌧", desc: "리듬이 상승하고 있습니다. 국지적 대류 가능성이 있습니다." };
+  return { state: "격렬 ⚡️", desc: "리듬이 급격히 교호 중입니다. 돌풍이나 소나기 가능성." };
 }
 
 export default function App() {
   const [selectedCity, setSelectedCity] = useState("서울");
-  const [hourly, setHourly] = useState([]);
   const [daily, setDaily] = useState([]);
+  const [hourly, setHourly] = useState([]);
   const [sResult, setSResult] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchWeather(selectedCity);
-  }, [selectedCity]);
+  useEffect(() => { fetchWeather(selectedCity); }, [selectedCity]);
 
   const fetchWeather = async (city) => {
     try {
       const query = cityMap[city] || city;
       const res = await fetch(
-        `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${query}&days=10&lang=ko`
+        `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${query}&lang=ko`
       );
-      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
 
       const data = await res.json();
-      if (!data.forecast || !data.forecast.forecastday)
-        throw new Error(`No forecast data for "${query}"`);
+      const initTemp = data.current.temp_c;
+      const initHumidity = data.current.humidity;
+      const model = simulateSNavier(initTemp, initHumidity, 10);
 
-      const hourlyData = data.forecast.forecastday[0].hour
-        .filter((_, i) => i % 3 === 0)
-        .map((h) => ({
-          time: h.time.split(" ")[1],
-          temp: Math.round(h.temp_c),
-          condition: h.condition.text
-        }));
+      const s_out = s_forecast_report(model.S);
 
-      const dailyData = data.forecast.forecastday.map((d) => ({
-        date: d.date,
-        avgTemp: Math.round(d.day.avgtemp_c),
-        condition: d.day.condition.text
+      // 10일치 예보 데이터 생성
+      const today = new Date();
+      const daysData = Array.from({ length: 10 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        const dateStr = d.toISOString().split("T")[0];
+        const base = Math.floor(model.Tavg + (Math.sin(i / 2) * 1.5));
+        return {
+          date: dateStr,
+          maxTemp: (base + (model.Tmax - model.Tavg) / 2).toFixed(1),
+          minTemp: (base - (model.Tavg - model.Tmin) / 2).toFixed(1),
+          avgTemp: base.toFixed(1),
+          humidity: model.Havg.toFixed(0),
+          condition:
+            s_out.state.includes("격렬") ? "폭우" :
+            s_out.state.includes("불안정") ? "소나기" :
+            s_out.state.includes("평형") ? "구름 많음" : "맑음",
+        };
+      });
+
+      // 실시간 (3시간 단위 리듬 예보)
+      const hourlyData = model.Tseries.slice(0, 24).map((t, i) => ({
+        time: `${String(i).padStart(2, "0")}:00`,
+        temp: t.toFixed(1),
       }));
 
-      // ✅ S-모델 계산
-      const tempSeq = hourlyData.map(h => h.temp);
-      const timeSeq = hourlyData.map(h => h.time);
-      const s_out = s_forecast_report(timeSeq, tempSeq);
       setSResult(s_out);
-
+      setDaily(daysData);
       setHourly(hourlyData);
-      setDaily(dailyData);
       setError(null);
     } catch (err) {
       console.error("❌ Error fetching weather:", err);
       setError(err.message);
-      setHourly([]);
-      setDaily([]);
       setSResult(null);
+      setDaily([]);
+      setHourly([]);
     }
   };
 
   return (
     <div className="app">
       <header className="header">
-        <h1>S-Forecast Lite</h1>
-        <select
-          value={selectedCity}
-          onChange={(e) => setSelectedCity(e.target.value)}
-        >
+        <h1>S-Navier Forecast</h1>
+        <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
           {Object.keys(cityMap).map((c) => (
             <option key={c}>{c}</option>
           ))}
@@ -120,12 +147,9 @@ export default function App() {
       </header>
 
       {error ? (
-        <p style={{ color: "red", marginTop: "20px" }}>
-          ⚠️ 데이터 로드 실패: {error}
-        </p>
+        <p className="error">⚠️ 데이터 로드 실패: {error}</p>
       ) : (
         <>
-          {/* ✅ 실시간 리듬 예보 (가운데 정렬) */}
           {sResult && (
             <section className="s-model-section">
               <h2>리듬 예보</h2>
@@ -134,27 +158,28 @@ export default function App() {
             </section>
           )}
 
-          {/* ✅ 3시간 간격 실시간 예보 */}
           <section className="hourly-section">
-            <div className="hourly-scroll">
+            <p className="forecast-date">예보 기준일: {new Date().toISOString().split("T")[0]}</p>
+            <div className="hourly-scroll small-text">
               {hourly.map((h, i) => (
                 <div key={i} className="hour-card">
                   <p>{h.time}</p>
                   <p>{h.temp}°C</p>
-                  <p className="condition">{h.condition}</p>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* ✅ 10일 예보 */}
           <section className="daily-section">
             <h2>10일 예보</h2>
             <table>
               <thead>
                 <tr>
                   <th>날짜</th>
+                  <th>최고</th>
+                  <th>최저</th>
                   <th>평균기온</th>
+                  <th>습도</th>
                   <th>날씨</th>
                 </tr>
               </thead>
@@ -162,7 +187,10 @@ export default function App() {
                 {daily.map((d, i) => (
                   <tr key={i}>
                     <td>{d.date}</td>
+                    <td>{d.maxTemp}°C</td>
+                    <td>{d.minTemp}°C</td>
                     <td>{d.avgTemp}°C</td>
+                    <td>{d.humidity}%</td>
                     <td>{d.condition}</td>
                   </tr>
                 ))}
@@ -172,7 +200,7 @@ export default function App() {
         </>
       )}
 
-      <footer>© 2025 Atthra Weather · Glitch Factory</footer>
+      <footer>© 2025 S-Navier Model · Glitch Factory</footer>
     </div>
   );
 }
