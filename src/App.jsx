@@ -3,23 +3,26 @@ import "./App.css";
 
 const API_KEY = "8370f7e693e34a79bdd180327252510";
 
-const cities = [
-  { name: "서울", query: "Seoul" },
-  { name: "수원", query: "Suwon" },
-  { name: "안산", query: "Ansan" },
-  { name: "안양", query: "Anyang" },
-  { name: "인천", query: "Incheon" },
-  { name: "강릉", query: "Gangneung" },
-  { name: "부산", query: "Busan" },
-  { name: "도쿄", query: "Tokyo" },
-  { name: "오사카", query: "Osaka" },
-  { name: "후쿠오카", query: "Fukuoka" },
-  { name: "마쓰야마", query: "Matsuyama" },
-];
+// 도시 한글–영문 매핑
+const CITY_MAP = {
+  서울: "Seoul",
+  수원: "Suwon",
+  안산: "Ansan",
+  안양: "Anyang",
+  인천: "Incheon",
+  강릉: "Gangneung",
+  부산: "Busan",
+  대구: "Daegu",
+  광주: "Gwangju",
+  대전: "Daejeon",
+  제주: "Jeju",
+  도쿄: "Tokyo",
+  오사카: "Osaka",
+  후쿠오카: "Fukuoka",
+  마쓰야마: "Matsuyama",
+};
 
-// ──────────────────────────────
-//  나비에 리듬 계산
-// ──────────────────────────────
+// ──────────────── 나비에 리듬 계산 ────────────────
 function computeS({ temp, humidity, wind = 0, cloud = 0 }) {
   const t = (temp - 15) / 12;
   const h = (humidity - 60) / 20;
@@ -37,9 +40,7 @@ function thresholdsFromS(hourlyS) {
   return { q30: q(0.3), q70: q(0.7) };
 }
 
-// ──────────────────────────────
-//  자연어 라벨
-// ──────────────────────────────
+// ──────────────── 자연어 라벨 ────────────────
 function labelFromS(S, season = "default", isDaily = false) {
   if (!isDaily) {
     if (S < 0.4) return "맑음";
@@ -54,26 +55,41 @@ function labelFromS(S, season = "default", isDaily = false) {
   return season === "winter" ? "비 또는 눈" : "비 또는 천둥";
 }
 
-// ──────────────────────────────
-//  메인 컴포넌트
-// ──────────────────────────────
+// ──────────────── 메인 컴포넌트 ────────────────
 export default function App() {
   const [selectedCity, setSelectedCity] = useState("서울");
   const [forecast, setForecast] = useState([]);
   const [hourly, setHourly] = useState([]);
   const [today, setToday] = useState("");
+  const [nowTime, setNowTime] = useState("");
 
   useEffect(() => {
     fetchWeather(selectedCity);
   }, [selectedCity]);
 
+  // 실시간 날짜/시간
+  useEffect(() => {
+    const updateNow = () => {
+      const n = new Date();
+      const formatted = `${n.getFullYear()}.${String(
+        n.getMonth() + 1
+      ).padStart(2, "0")}.${String(n.getDate()).padStart(
+        2,
+        "0"
+      )} ${n.getHours()}:${String(n.getMinutes()).padStart(2, "0")}`;
+      setNowTime(formatted);
+    };
+    updateNow();
+    const timer = setInterval(updateNow, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   const fetchWeather = async (city) => {
     try {
-      const cityQuery = cities.find((c) => c.name === city)?.query;
+      const cityQuery = CITY_MAP[city] || city;
       const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${cityQuery}&days=7&lang=ko`;
       const res = await fetch(url);
       const data = await res.json();
-
       if (!data.forecast) return;
 
       const hours = data.forecast.forecastday[0].hour;
@@ -87,7 +103,6 @@ export default function App() {
         return { time: h.time.slice(-5), S, humidity: h.humidity };
       });
 
-      const th = thresholdsFromS(hourlyCalc.map((x) => x.S));
       setHourly(
         hourlyCalc.map((h) => ({
           time: h.time,
@@ -99,8 +114,7 @@ export default function App() {
       const α = 2.6,
         β = 1.8;
       const daily = data.forecast.forecastday.map((d) => {
-        const dayHours = d.hour?.length ? d.hour : hours;
-        const dayS = dayHours.map((h) =>
+        const dayS = d.hour.map((h) =>
           computeS({
             temp: h.temp_c,
             humidity: h.humidity,
@@ -108,14 +122,11 @@ export default function App() {
             cloud: h.cloud ?? 0,
           })
         );
-        const dayTh = thresholdsFromS(dayS);
         const Smean = dayS.reduce((a, b) => a + b, 0) / dayS.length;
-
         const tAvg = d.day.avgtemp_c;
         const tMax = (tAvg + α * Smean).toFixed(1);
         const tMin = (tAvg - β * Smean).toFixed(1);
         const cond = labelFromS(Smean, "default", true);
-
         return {
           date: d.date,
           avgtemp: tAvg.toFixed(1),
@@ -137,11 +148,18 @@ export default function App() {
     <div className="App">
       <h1>S-Forecast (Adaptive Navier Model)</h1>
 
+      <p className="time-label">
+        {nowTime} — {selectedCity}
+      </p>
+
       <div className="selector">
         <label>도시 선택: </label>
-        <select value={selectedCity} onChange={(e) => setSelectedCity(e.target.value)}>
-          {cities.map((c) => (
-            <option key={c.name}>{c.name}</option>
+        <select
+          value={selectedCity}
+          onChange={(e) => setSelectedCity(e.target.value)}
+        >
+          {Object.keys(CITY_MAP).map((c) => (
+            <option key={c}>{c}</option>
           ))}
         </select>
       </div>
@@ -158,7 +176,7 @@ export default function App() {
         ))}
       </div>
 
-      <h2>7일 예보</h2>
+      <h2>7일 예보 — {selectedCity}</h2>
       <table>
         <thead>
           <tr>
@@ -185,7 +203,7 @@ export default function App() {
       </table>
 
       <footer>
-        Glitch Factory | S-Forecast ver.2.4n — Natural Language Edition
+        Glitch Factory | S-Forecast ver.2.5n — Natural Language + Date Edition
       </footer>
     </div>
   );
