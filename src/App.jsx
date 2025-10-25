@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import "./App.css";
 
 export default function App() {
-  // 🔹 한글표시 + API 영문 매핑
+  // 🔹 한글표시 + API영문맵핑
   const cities = [
     { name: "서울", query: "Seoul" },
     { name: "수원", query: "Suwon" },
@@ -20,9 +20,10 @@ export default function App() {
   const [forecast, setForecast] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const API_KEY = "74f3c722bf494188b92132611252510"; 
+  const API_KEY = "74f3c722bf494188b92132611252510"; // WeatherAPI key
   const α = 0.7, β = 0.5;
 
+  // 리듬 기반 S 계산 (습도, 구름, 온도)
   function computeS(h) {
     const hum = h.humidity ?? 0;
     const cloud = h.cloud ?? 0;
@@ -31,6 +32,7 @@ export default function App() {
     return Math.max(0, Math.min(1, S));
   }
 
+  // 비 과예측 완화
   function softenIfNoPrecip(label, precip_mm, humidity, cloud) {
     if ((precip_mm ?? 0) < 0.1 && humidity < 86 && cloud < 80) {
       if (label.includes("비")) return "대체로 흐림 (비 가능성 약함)";
@@ -38,6 +40,7 @@ export default function App() {
     return label;
   }
 
+  // S→자연어 예보
   function labelFromS(S, isDaily = false) {
     if (!isDaily) {
       if (S < 0.45) return "맑음";
@@ -52,13 +55,16 @@ export default function App() {
     return "비";
   }
 
+  // 도시별 데이터 호출
   async function getWeather(cityQuery) {
     const res = await fetch(
       `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${cityQuery}&days=7&lang=ko`
     );
-    return await res.json();
+    const data = await res.json();
+    return data;
   }
 
+  // 전체 병렬 로딩
   async function loadAll() {
     setLoading(true);
     const results = await Promise.all(
@@ -71,13 +77,25 @@ export default function App() {
 
           const d = data.forecast.forecastday[0].day;
           const condBase = labelFromS(Smean, true);
-          const cond = softenIfNoPrecip(condBase, d.totalprecip_mm ?? 0, d.avghumidity ?? 0, d.daily_chance_of_rain ?? 0);
+          const cond = softenIfNoPrecip(
+            condBase,
+            d.totalprecip_mm ?? 0,
+            d.avghumidity ?? 0,
+            d.daily_chance_of_rain ?? 0
+          );
+
           const tAvg = d.avgtemp_c;
           const tMax = (tAvg + α * Smean).toFixed(1);
           const tMin = (tAvg - β * Smean).toFixed(1);
 
-          return { name, condition: cond, temp: `${tMin}° / ${tMax}°`, icon: d.condition?.icon ?? "" };
-        } catch {
+          return {
+            name,
+            condition: cond,
+            temp: `${tMin}° / ${tMax}°`,
+            icon: d.condition?.icon ?? ""
+          };
+        } catch (err) {
+          console.error(name, "에러:", err);
           return { name, condition: "데이터 오류", temp: "-", icon: "" };
         }
       })
@@ -89,11 +107,13 @@ export default function App() {
     setLoading(false);
   }
 
-  useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    loadAll();
+  }, []);
 
   return (
     <div className="App">
-      <h2>S-Forecast ver.2.6n3 — Regional Resonance (KOR–ENG)</h2>
+      <h2>S-Forecast ver.2.6n3 — Regional Resonance (KOR–ENG Mapping)</h2>
       {loading ? (
         <p>날씨 데이터를 불러오는 중...</p>
       ) : (
