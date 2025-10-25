@@ -1,9 +1,8 @@
-// App.jsx — S-Forecast ver.2.6 (한글표시 + Adaptive Precision Edition)
+// App.jsx — S-Forecast ver.2.6r (Real-Time Restore Edition)
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
 export default function App() {
-  // 🔹 한글표시 + API영문맵핑
   const cities = [
     { name: "서울", query: "Seoul" },
     { name: "수원", query: "Suwon" },
@@ -15,20 +14,16 @@ export default function App() {
     { name: "후쿠오카", query: "Fukuoka" },
     { name: "유후인", query: "Yufuin" },
     { name: "나고야", query: "Nagoya" },
-    { name: "미쓰야마", query: "Matsuyama" }
+    { name: "마쓰야마", query: "Matsuyama" }
   ];
 
   const [city, setCity] = useState(cities[0]);
   const [forecast, setForecast] = useState([]);
   const [current, setCurrent] = useState(null);
   const [status, setStatus] = useState("");
+  const [realTime, setRealTime] = useState({ desc: "", temp: 0, humidity: 0 });
 
-  // === Adaptive Navier Rhythm Parameters ===
-  const alpha = 0.82;
-  const beta = 0.68;
-  const gamma = 0.03;
-  const kappa = 1.45;
-  const dt = 0.01;
+  const alpha = 0.82, beta = 0.68, gamma = 0.03, kappa = 1.45, dt = 0.01;
 
   useEffect(() => {
     fetchWeather(city.query);
@@ -41,44 +36,51 @@ export default function App() {
       const res = await fetch(url);
       const data = await res.json();
 
-      if (data && data.forecast) {
-        setForecast(data.forecast.forecastday);
-        setCurrent(data.current);
-        const rhythm = computeRhythm(data.forecast.forecastday);
-        setStatus(rhythm);
+      if (!data || !data.forecast || !data.forecast.forecastday) {
+        setForecast([]);
+        setCurrent(null);
+        setStatus("데이터 없음 (API 응답 누락)");
+        return;
       }
+
+      setForecast(data.forecast.forecastday);
+      setCurrent(data.current);
+      const rhythm = computeRhythm(data.forecast.forecastday);
+      setStatus(rhythm);
+
+      // ✅ 실시간 리듬 표시용 데이터 구성
+      const real = {
+        temp: data.current.temp_c,
+        humidity: data.current.humidity,
+        desc: data.current.condition.text
+      };
+      setRealTime(real);
+
     } catch (e) {
       console.error("Weather fetch error:", e);
       setStatus("데이터를 불러오지 못했습니다.");
     }
   }
 
-  // === Adaptive Navier Rhythm Model ===
   function computeRhythm(days) {
     const temps = days.map((d) => d.day.avgtemp_c);
     const hums = days.map((d) => d.day.avghumidity);
     const winds = days.map((d) => d.day.maxwind_kph);
-
     const n = temps.length;
+
     const normT = temps.map((t) => (t - Math.min(...temps)) / (Math.max(...temps) - Math.min(...temps) + 1e-6));
     const normH = hums.map((h) => h / 100);
     const normW = winds.map((w) => w / Math.max(...winds));
 
     let rho = 0.5, S = 0.0;
     for (let i = 0; i < n; i++) {
-      const T = normT[i];
-      const H = normH[i];
-      const W = normW[i];
-
+      const T = normT[i], H = normH[i], W = normW[i];
       const α = alpha + 0.2 * (T - 0.5);
       const β = beta + 0.1 * (H - 0.5);
       const η = 0.05 + 0.1 * W;
-
-      const lam_up = α * rho;
-      const lam_down = β * (1 - rho);
+      const lam_up = α * rho, lam_down = β * (1 - rho);
       const drho = -gamma * rho + (lam_up - lam_down) * rho - η * Math.max(0, rho - 0.4);
       rho += drho * dt;
-
       const dS = (lam_up - lam_down) * kappa;
       S += dS * dt;
     }
@@ -108,16 +110,19 @@ export default function App() {
         </select>
       </div>
 
-      {/* 🔹 선택된 도시명 표시 */}
-      <p className="city-name">{city.name}</p>
+      {/* 🔹 실시간 영역 */}
+      <div className="realtime">
+        <p className="date">{new Date().toLocaleDateString("ko-KR")}</p>
+        <p className="city">{city.name}</p>
+        <p className="temp">{realTime.temp.toFixed(1)}°C</p>
+        <p className="humidity">습도 {realTime.humidity}%</p>
+        <p className="desc">{realTime.desc}</p>
+      </div>
 
-      {current && (
-        <div className="current">
-          <p className="date">{new Date(current.last_updated).toLocaleDateString("ko-KR")}</p>
-          <p className="temp">현재 온도 {current.temp_c}°C, 습도 {current.humidity}%</p>
-          <p className="status">{status}</p>
-        </div>
-      )}
+      {/* 🔹 리듬 상태 */}
+      <div className="status-box">
+        <p className="status">{status}</p>
+      </div>
 
       <table className="forecast">
         <thead>
