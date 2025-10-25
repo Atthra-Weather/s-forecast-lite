@@ -1,173 +1,135 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "./App.css";
 
-/** ─────────────────────────────
- *  S-Navier 리듬 모델 (내장, 한 파일)
- *  초기: 평균온도 T0(℃), 평균습도 H0(%), days일 시뮬
- *  ───────────────────────────── */
-function simulateSNavier(T0 = 22.5, H0 = 65, days = 7) {
-  const hours = days * 24;
-  const dt = 1;
-  const gamma = 0.04;                 // 감쇠
-  const alpha = 0.03;                 // 구동
-  const omega = (2 * Math.PI) / 24;   // 일주기
-  const beta = 10;                    // 온도 변환 강도
+const API_KEY = "8370f7e693e34a79bdd180327252510";
 
-  let rho = T0 / 100;
-  const S = [];
-  const Tseries = [];
-  const Hseries = [];
-
-  for (let t = 0; t < hours; t++) {
-    const drho = -gamma * rho + alpha * Math.sin(omega * t);
-    rho += drho * dt;
-    const s = Math.abs(drho) ** 2;
-    S.push(s);
-
-    const temp = T0 + beta * Math.sqrt(s) * Math.sin(omega * t);
-    Tseries.push(temp);
-
-    const hum = H0 + 8 * Math.sin(omega * t + Math.PI / 3);
-    Hseries.push(Math.max(0, Math.min(100, hum)));
-  }
-
-  const Tmax = Math.max(...Tseries);
-  const Tmin = Math.min(...Tseries);
-  const Tavg = Tseries.reduce((a, b) => a + b, 0) / Tseries.length;
-  const Havg = Hseries.reduce((a, b) => a + b, 0) / Hseries.length;
-
-  return { Tmax, Tmin, Tavg, Havg, Tseries, S };
-}
-
-/** ─────────────────────────────
- *  날씨 상태(맑음/구름/소나기/폭우) 판정
- *  ───────────────────────────── */
-function getCondition(localS, meanS, stdS) {
-  const z = (localS - meanS) / (stdS || 1e-6);
-  if (z < -0.5) return "맑음";
-  if (z < 0.5)  return "구름 많음";
-  if (z < 1.2)  return "소나기";
-  return "폭우";
-}
-
-/** ─────────────────────────────
- *  11개 도시 (한글 표기 그대로)
- *  ───────────────────────────── */
-const cityMap = {
-  "서울": "Seoul",
-  "수원": "Suwon",
-  "안산": "Ansan",
-  "안양": "Anyang",
-  "인천": "Incheon",
-  "강릉": "Gangneung",
-  "부산": "Busan",
-  "도쿄": "Tokyo",
-  "오사카": "Osaka",
-  "후쿠오카": "Fukuoka",
-  "마쓰야마": "Matsuyama"
-};
+// 한글 표시는 유지하면서, 실제 쿼리는 영어
+const cities = [
+  { name: "서울", query: "Seoul" },
+  { name: "수원", query: "Suwon" },
+  { name: "안산", query: "Ansan" },
+  { name: "안양", query: "Anyang" },
+  { name: "인천", query: "Incheon" },
+  { name: "강릉", query: "Gangneung" },
+  { name: "부산", query: "Busan" },
+  { name: "도쿄", query: "Tokyo" },
+  { name: "오사카", query: "Osaka" },
+  { name: "후쿠오카", query: "Fukuoka" },
+  { name: "마쓰야마", query: "Matsuyama" },
+];
 
 export default function App() {
   const [selectedCity, setSelectedCity] = useState("서울");
   const [forecast, setForecast] = useState([]);
-  const [summary, setSummary] = useState("");
+  const [status, setStatus] = useState({ state: "", desc: "" });
 
-  useEffect(() => {
-    const today = new Date();
-
-    // ✅ 외부 API 없이, 한 파일 내 S-Navier 모델로 7일 생성
-    const model = simulateSNavier(22.5, 65, 7);
-
-    const meanS = model.S.reduce((a, b) => a + b, 0) / model.S.length;
-    const stdS = Math.sqrt(
-      model.S.reduce((a, b) => a + (b - meanS) ** 2, 0) / model.S.length
-    );
-
-    // 7일 예보 생성 (날짜별로 S 변동 반영)
-    const daysData = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      const dateStr = d.toISOString().split("T")[0];
-
-      const localS = model.S[i * 24] ?? meanS;
-      const humVar = 8 * Math.sin(i / 1.7 + Math.random() * 0.8);
-      const dayHumidity = Math.max(20, Math.min(100, model.Havg + humVar));
-
-      return {
-        date: dateStr,
-        condition: getCondition(localS, meanS, stdS),
-        maxTemp: (model.Tavg + Math.sqrt(localS) * 8).toFixed(1),
-        minTemp: (model.Tavg - Math.sqrt(localS) * 6).toFixed(1),
-        humidity: dayHumidity.toFixed(0)
-      };
-    });
-
-    // 리듬 요약
-    const lastS = model.S[model.S.length - 1];
+  // --- Navier 모델 계산식 ---
+  function navierModel(temp, humidity) {
+    const rho = humidity / 100;
+    const dRho = Math.sin(temp / 10) * 0.1;
+    const S = Math.abs(dRho) * 10;
     let state, desc;
-    if (lastS < meanS - stdS * 0.5) {
-      state = "안정";
-      desc = "리듬이 평형에 가깝습니다. 대체로 맑고 고요한 날씨가 예상됩니다.";
-    } else if (lastS < meanS + stdS * 0.5) {
-      state = "평형";
-      desc = "리듬이 완만하게 변동 중입니다. 구름이 간헐적으로 낄 수 있습니다.";
-    } else {
-      state = "불안정";
-      desc = "리듬이 상승 중입니다. 오후 이후 소나기나 대류 가능성이 있습니다.";
-    }
 
-    setForecast(daysData);
-    setSummary(`현재 상태: ${state} — ${desc}`);
+    if (S < 0.5) {
+      state = "안정";
+      desc = "리듬이 평형을 유지하고 있습니다. 대체로 맑고 고요한 상태입니다.";
+    } else if (S < 1.5) {
+      state = "불안정";
+      desc = "리듬이 약간 요동치고 있습니다. 구름이 많고 변화가 감지됩니다.";
+    } else {
+      state = "복원";
+      desc = "리듬이 급격히 상승 중입니다. 대류 활동과 강수 가능성이 있습니다.";
+    }
+    return { S, state, desc };
+  }
+
+  // --- WeatherAPI fetch + Navier 모델 적용 ---
+  useEffect(() => {
+    const fetchData = async () => {
+      const cityQuery = cities.find((c) => c.name === selectedCity)?.query;
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${cityQuery}&days=7&aqi=no&alerts=no&lang=ko`;
+
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const processed = data.forecast.forecastday.map((d) => {
+        const { S } = navierModel(d.day.avgtemp_c, d.day.avghumidity);
+        const max = d.day.avgtemp_c + 3 * S;
+        const min = d.day.avgtemp_c - 2 * S;
+        const condition =
+          S < 0.5 ? "맑음" : S < 1.5 ? "흐림" : "비 또는 소나기";
+        return {
+          date: d.date,
+          avgtemp: d.day.avgtemp_c.toFixed(1),
+          maxtemp: max.toFixed(1),
+          mintemp: min.toFixed(1),
+          humidity: d.day.avghumidity,
+          condition,
+        };
+      });
+
+      const { state, desc } = navierModel(
+        data.current.temp_c,
+        data.current.humidity
+      );
+
+      setStatus({ state, desc });
+      setForecast(processed);
+    };
+
+    fetchData();
   }, [selectedCity]);
 
   return (
     <div className="App">
-      <h1>S-Forecast (Navier Model)</h1>
+      <h1 className="app-title">S-Forecast · Navier Model</h1>
 
-      {/* 도시 선택 (11개) */}
-      <div className="city-select" style={{ marginBottom: 12 }}>
-        <label style={{ marginRight: 6 }}>도시 선택: </label>
+      <div className="city-selector">
         <select
           value={selectedCity}
           onChange={(e) => setSelectedCity(e.target.value)}
         >
-          {Object.keys(cityMap).map((city) => (
-            <option key={city} value={city}>
-              {city}
-            </option>
+          {cities.map((c) => (
+            <option key={c.query}>{c.name}</option>
           ))}
         </select>
       </div>
 
-      <h2 style={{ fontSize: 16, margin: "6px 0 8px" }}>
-        {selectedCity} 7일 리듬 예보
-      </h2>
-      {/* 리듬 예보 3줄 고정(말줄임) → CSS .forecast-text 에서 제어 */}
-      <p className="forecast-text">{summary}</p>
+      <div className="realtime-status">
+        <h2>리듬 예보</h2>
+        <p className="state">{status.state}</p>
+        <p className="desc">{status.desc}</p>
+      </div>
 
-      {/* 7일 예보 표 (세로선 없이 중앙정렬) */}
-      <table className="forecast-table">
-        <thead>
-          <tr>
-            <th>날짜</th>
-            <th>날씨</th>
-            <th>최고</th>
-            <th>최저</th>
-            <th>습도</th>
-          </tr>
-        </thead>
-        <tbody>
-          {forecast.map((f) => (
-            <tr key={f.date}>
-              <td>{f.date}</td>
-              <td>{f.condition}</td>
-              <td>{f.maxTemp}°C</td>
-              <td>{f.minTemp}°C</td>
-              <td>{f.humidity}%</td>
+      <div className="forecast-table">
+        <h2>7일 예보</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>날씨</th>
+              <th>평균기온(°C)</th>
+              <th>최고</th>
+              <th>최저</th>
+              <th>습도(%)</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {forecast.map((d) => (
+              <tr key={d.date}>
+                <td>{d.date}</td>
+                <td>{d.condition}</td>
+                <td>{d.avgtemp}</td>
+                <td>{d.maxtemp}</td>
+                <td>{d.mintemp}</td>
+                <td>{d.humidity}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <footer>© 2025 Glitch Factory · S-Forecast Navier Model ver. 2.1</footer>
     </div>
   );
 }
