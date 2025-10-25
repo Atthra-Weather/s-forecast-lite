@@ -3,44 +3,71 @@ import "./App.css";
 
 const API_KEY = "8370f7e693e34a79bdd180327252510";
 
-// 도시 한글–영문 매핑
+// 도시 한글–영문·위도·고도 매핑
 const CITY_MAP = {
-  서울: "Seoul",
-  수원: "Suwon",
-  안산: "Ansan",
-  안양: "Anyang",
-  인천: "Incheon",
-  강릉: "Gangneung",
-  부산: "Busan",
-  대구: "Daegu",
-  광주: "Gwangju",
-  대전: "Daejeon",
-  제주: "Jeju",
-  도쿄: "Tokyo",
-  오사카: "Osaka",
-  후쿠오카: "Fukuoka",
-  마쓰야마: "Matsuyama",
+  서울: { name: "Seoul", lat: 37.5, alt: 50 },
+  수원: { name: "Suwon", lat: 37.3, alt: 45 },
+  안산: { name: "Ansan", lat: 37.3, alt: 20 },
+  안양: { name: "Anyang", lat: 37.4, alt: 40 },
+  인천: { name: "Incheon", lat: 37.4, alt: 30 },
+  강릉: { name: "Gangneung", lat: 37.7, alt: 80 },
+  부산: { name: "Busan", lat: 35.2, alt: 10 },
+  대구: { name: "Daegu", lat: 35.9, alt: 70 },
+  광주: { name: "Gwangju", lat: 35.1, alt: 35 },
+  대전: { name: "Daejeon", lat: 36.3, alt: 70 },
+  제주: { name: "Jeju", lat: 33.5, alt: 20 },
+  도쿄: { name: "Tokyo", lat: 35.7, alt: 40 },
+  오사카: { name: "Osaka", lat: 34.7, alt: 20 },
+  후쿠오카: { name: "Fukuoka", lat: 33.6, alt: 10 },
+  마쓰야마: { name: "Matsuyama", lat: 33.8, alt: 50 },
 };
 
+// 지역 계수
+function regionAlpha(lat, alt) {
+  return 1 + 0.002 * (lat - 35) + 0.0005 * (alt - 50);
+}
+
+// 시간 보간
+function interpolateHourly(data) {
+  const result = [];
+  for (let i = 0; i < data.length - 1; i++) {
+    const a = data[i],
+      b = data[i + 1];
+    result.push(a);
+    const mid = {
+      time: a.time,
+      temp_c: (a.temp_c + b.temp_c) / 2,
+      humidity: (a.humidity + b.humidity) / 2,
+      wind_kph: (a.wind_kph + b.wind_kph) / 2,
+      cloud: (a.cloud + b.cloud) / 2,
+    };
+    result.push(mid);
+  }
+  result.push(data[data.length - 1]);
+  return result;
+}
+
 // ──────────────── 나비에 리듬 계산 ────────────────
-function computeS({ temp, humidity, wind = 0, cloud = 0 }) {
+function computeS({ temp, humidity, wind = 0, cloud = 0, observedS = null, lat = 35, alt = 0 }) {
   const t = (temp - 15) / 12;
   const h = (humidity - 60) / 20;
   const w = (wind - 10) / 10;
   const c = (cloud - 50) / 50;
   const diurnal = Math.sin(temp / 7) * 0.6;
   const interact = 0.4 * h * c + 0.25 * w * c;
-  const s = Math.abs(0.9 * diurnal + 0.7 * h + 0.5 * c + 0.4 * w + interact);
+  let s = Math.abs(0.9 * diurnal + 0.7 * h + 0.5 * c + 0.4 * w + interact);
+
+  // 실측 기반 보정
+  if (observedS !== null) {
+    const k = 0.3;
+    s = s + k * (observedS - s);
+  }
+
+  // 지역 계수 적용
+  s *= regionAlpha(lat, alt);
   return Math.min(3, s * 1.2);
 }
 
-function thresholdsFromS(hourlyS) {
-  const sorted = [...hourlyS].sort((a, b) => a - b);
-  const q = (p) => sorted[Math.floor((sorted.length - 1) * p)];
-  return { q30: q(0.3), q70: q(0.7) };
-}
-
-// ──────────────── 자연어 라벨 ────────────────
 function labelFromS(S, season = "default", isDaily = false) {
   if (!isDaily) {
     if (S < 0.4) return "맑음";
@@ -67,7 +94,6 @@ export default function App() {
     fetchWeather(selectedCity);
   }, [selectedCity]);
 
-  // 실시간 날짜/시간
   useEffect(() => {
     const updateNow = () => {
       const n = new Date();
@@ -86,19 +112,31 @@ export default function App() {
 
   const fetchWeather = async (city) => {
     try {
-      const cityQuery = CITY_MAP[city] || city;
-      const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${cityQuery}&days=7&lang=ko`;
+      const { name, lat, alt } = CITY_MAP[city] || { name: city, lat: 35, alt: 0 };
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${name}&days=7&lang=ko`;
       const res = await fetch(url);
       const data = await res.json();
       if (!data.forecast) return;
 
-      const hours = data.forecast.forecastday[0].hour;
-      const hourlyCalc = hours.map((h) => {
+      const hoursRaw = interpolateHourly(data.forecast.forecastday[0].hour);
+      const observed = computeS({
+        temp: data.current.temp_c,
+        humidity: data.current.humidity,
+        wind: data.current.wind_kph,
+        cloud: data.current.cloud,
+        lat,
+        alt,
+      });
+
+      const hourlyCalc = hoursRaw.map((h) => {
         const S = computeS({
           temp: h.temp_c,
           humidity: h.humidity,
           wind: h.wind_kph ?? 0,
           cloud: h.cloud ?? (h.condition?.code ? 60 : 0),
+          observedS: observed,
+          lat,
+          alt,
         });
         return { time: h.time.slice(-5), S, humidity: h.humidity };
       });
@@ -120,6 +158,9 @@ export default function App() {
             humidity: h.humidity,
             wind: h.wind_kph ?? 0,
             cloud: h.cloud ?? 0,
+            observedS: observed,
+            lat,
+            alt,
           })
         );
         const Smean = dayS.reduce((a, b) => a + b, 0) / dayS.length;
@@ -146,7 +187,7 @@ export default function App() {
 
   return (
     <div className="App">
-      <h1>S-Forecast (Adaptive Navier Model)</h1>
+      <h1>S-Forecast (High-Precision Navier Model)</h1>
 
       <p className="time-label">
         {nowTime} — {selectedCity}
@@ -203,7 +244,7 @@ export default function App() {
       </table>
 
       <footer>
-        Glitch Factory | S-Forecast ver.2.5n — Natural Language + Date Edition
+        Glitch Factory | S-Forecast ver.2.6n — High-Precision Edition
       </footer>
     </div>
   );
