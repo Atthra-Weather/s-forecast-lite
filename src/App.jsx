@@ -1,4 +1,4 @@
-// App.jsx — S-Forecast ver.2.6p-6h-ggr (Gyeonggi Grid Refinement)
+// App.jsx — S-Forecast ver.2.6p-6h-ggr-fix (Yongin Coordinate Verified)
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
@@ -7,19 +7,20 @@ export default function App() {
 
   // 한글 표기 + 영문 호출 + 좌표 (정밀도↑)
   const CITY = {
-    서울:   { name_en: "Seoul",   lat: 37.5665, lon: 126.9780 },
-    수원:   { name_en: "Suwon",   lat: 37.2636, lon: 127.0286 },
-    용인: { name_en: "Yongin-si", lat: 37.241086, lon: 127.177553 },
-    안산:   { name_en: "Ansan",   lat: 37.3219, lon: 126.8309 },
-    안양:   { name_en: "Anyang",  lat: 37.3943, lon: 126.9568 },
-    강릉:   { name_en: "Gangneung", lat: 37.7519, lon: 128.8761 },
-    부산:   { name_en: "Busan",   lat: 35.1796, lon: 129.0756 },
-    오사카: { name_en: "Osaka",   lat: 34.6937, lon: 135.5023 },
-    후쿠오카:{ name_en: "Fukuoka", lat: 33.5902, lon: 130.4017 },
-    유후인: { name_en: "Yufuin",  lat: 33.2659, lon: 131.3461 },
-    나고야: { name_en: "Nagoya",  lat: 35.1815, lon: 136.9066 },
-    마쓰야마:{ name_en: "Matsuyama", lat: 33.8393, lon: 132.7657 },
+    서울:   { name_en: "Seoul",      lat: 37.5665,    lon: 126.9780 },
+    수원:   { name_en: "Suwon",      lat: 37.2636,    lon: 127.0286 },
+    용인:   { name_en: "Yongin-si",  lat: 37.241086,  lon: 127.177553 },
+    안산:   { name_en: "Ansan",      lat: 37.3219,    lon: 126.8309 },
+    안양:   { name_en: "Anyang",     lat: 37.3943,    lon: 126.9568 },
+    강릉:   { name_en: "Gangneung",  lat: 37.7519,    lon: 128.8761 },
+    부산:   { name_en: "Busan",      lat: 35.1796,    lon: 129.0756 },
+    오사카: { name_en: "Osaka",      lat: 34.6937,    lon: 135.5023 },
+    후쿠오카:{ name_en: "Fukuoka",   lat: 33.5902,    lon: 130.4017 },
+    유후인: { name_en: "Yufuin",     lat: 33.2659,    lon: 131.3461 },
+    나고야: { name_en: "Nagoya",     lat: 35.1815,    lon: 136.9066 },
+    마쓰야마:{ name_en: "Matsuyama", lat: 33.8393,    lon: 132.7657 },
   };
+
   const CITY_NAMES = Object.keys(CITY);
 
   const [city, setCity] = useState("수원");
@@ -59,8 +60,13 @@ export default function App() {
     s *= 1 + 0.002 * (lat - 35);
     return Math.min(3, s * 1.2);
   }
+
   function labelFromS(S, isDaily=false) {
-    if (!isDaily) { if (S<0.4) return "맑음"; if (S<0.75) return "흐림"; return "비"; }
+    if (!isDaily) {
+      if (S<0.4) return "맑음";
+      if (S<0.75) return "흐림";
+      return "비";
+    }
     if (S<0.30) return "맑음";
     if (S<0.45) return "대체로 맑음";
     if (S<0.60) return "가끔 구름 많음";
@@ -68,10 +74,15 @@ export default function App() {
     if (S<0.90) return "비 또는 소나기";
     return "비 또는 천둥";
   }
+
+  // 안전한 좌표 기반 호출 (toFixed + 에러 체크)
   async function fetchPoint(lat, lon) {
-    const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${lat},${lon}&days=7&aqi=no&alerts=no&lang=ko`;
+    const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${lat.toFixed(4)},${lon.toFixed(4)}&days=7&aqi=no&alerts=no&lang=ko`;
     const res = await fetch(url);
-    return await res.json();
+    if (!res.ok) throw new Error(`API status ${res.status}`);
+    const data = await res.json();
+    if (!data?.location) throw new Error("Invalid location data");
+    return data;
   }
 
   // 시간축 병합(같은 index 시간끼리 평균)
@@ -90,6 +101,7 @@ export default function App() {
       };
     });
   }
+
   // 일별 병합
   function mergeDaily(pointDatas) {
     const days = pointDatas[0].forecast.forecastday.length;
@@ -137,7 +149,6 @@ export default function App() {
 
       const hourlyMerged = mergeHourly(datas);
 
-      // ✅ 강수량·확률 기반 완화 보정 적용
       const next6 = hourlyMerged.filter(h=>{
         const hh = new Date(h.time.replace(" ","T")).getHours();
         const diff = (hh - nowH + 24) % 24;
@@ -145,14 +156,7 @@ export default function App() {
       }).map(h => {
         const S = computeS({ temp:h.temp_c, humidity:h.humidity, wind:h.wind_kph??0, cloud:h.cloud??0, lat });
         const rain = h.precip_mm ?? 0;
-        const chance = h.chance_of_rain ?? 0;
-
-        // 🌤 강수 거의 없을 때 완화 라벨 적용
-        let condition = labelFromS(S, false);
-        if (rain < 0.1 && chance < 10 && condition.includes("비")) {
-          condition = "대체로 흐림 (비 가능성 거의 없음)";
-        }
-
+        const condition = rain < 0.1 ? labelFromS(S,false) : "비";
         return {
           time: h.time.slice(-5),
           temp: h.temp_c,
@@ -175,16 +179,17 @@ export default function App() {
       setCurrent(curr);
       setStatus(summarizeRhythm(daysMerged, lat));
     } catch (e) {
-      console.error("Weather fetch error:", e);
+      console.error("Weather fetch error for", cityKo, e.message);
       setHourly([]); setForecast([]); setCurrent(null);
-      setStatus("데이터 불러오기 실패");
+      setStatus(`데이터 불러오기 실패 (${cityKo})`);
     }
   }
 
   useEffect(()=>{ fetchWeather(city); },[city]);
+
   return (
     <div className="App">
-      <h1>S-Forecast ver.2.6p-6h</h1>
+      <h1>S-Forecast ver.2.6p-6h-ggr-fix</h1>
 
       <div className="selector">
         <label>도시 선택: </label>
