@@ -128,36 +128,39 @@ export default function App() {
   async function fetchWeather(cityKo) {
     try {
       const { name_en, lat, lon } = CITY[cityKo];
-      // 경기도/수도권 정밀도↑: 마이크로그리드 병렬 호출
       const points = microgrid(lat, lon);
       const datas = await Promise.all(points.map(p => fetchPoint(p.lat, p.lon)));
 
-      // 로컬타임 기준 현재 시각
       const localNow = new Date(datas[0].location.localtime);
       const nowH = localNow.getHours();
 
-      // 병합된 시간별
       const hourlyMerged = mergeHourly(datas);
 
-      // 현재~+6시간 슬라이스 (자정경계 보정)
+      // ✅ 강수량·확률 기반 완화 보정 적용
       const next6 = hourlyMerged.filter(h=>{
         const hh = new Date(h.time.replace(" ","T")).getHours();
         const diff = (hh - nowH + 24) % 24;
         return diff >= 0 && diff < 6;
-      }).map(h => ({
-        time: h.time.slice(-5),
-        temp: h.temp_c,
-        humidity: h.humidity,
-        condition: labelFromS(
-          computeS({ temp:h.temp_c, humidity:h.humidity, wind:h.wind_kph??0, cloud:h.cloud??0, lat }),
-          false
-        )
-      }));
+      }).map(h => {
+        const S = computeS({ temp:h.temp_c, humidity:h.humidity, wind:h.wind_kph??0, cloud:h.cloud??0, lat });
+        const rain = h.precip_mm ?? 0;
+        const chance = h.chance_of_rain ?? 0;
 
-      // 일별 병합
+        // 🌤 강수 거의 없을 때 완화 라벨 적용
+        let condition = labelFromS(S, false);
+        if (rain < 0.1 && chance < 10 && condition.includes("비")) {
+          condition = "대체로 흐림 (비 가능성 거의 없음)";
+        }
+
+        return {
+          time: h.time.slice(-5),
+          temp: h.temp_c,
+          humidity: h.humidity,
+          condition,
+        };
+      });
+
       const daysMerged = mergeDaily(datas);
-
-      // 현재값(간단 평균)
       const curr = {
         temp_c:    datas.reduce((a,d)=>a+(d.current?.temp_c??0),0)/datas.length,
         humidity:  datas.reduce((a,d)=>a+(d.current?.humidity??0),0)/datas.length,
