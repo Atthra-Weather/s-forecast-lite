@@ -23,6 +23,7 @@ export default function App() {
         `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${city}&days=10&lang=ko`
       );
       const data = await res.json();
+      console.log("Weather Data:", data);
 
       const now = new Date();
       const currentHour = now.getHours();
