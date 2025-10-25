@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import "./App.css";
 
 export default function SForecastApp() {
   const [weatherData, setWeatherData] = useState(null);
@@ -46,13 +47,12 @@ export default function SForecastApp() {
       </header>
 
       <section className="hourly">
-        <h2>12시간 예보</h2>
         <div className="hourly-grid">
           {hourly.map((h, i) => (
             <div key={i} className="hour-card">
-              <div>{h.time.slice(11, 16)}</div>
-              <div>{h.temp_c}°</div>
-              <div>{h.condition.text}</div>
+              <div className="hour-time">{h.time.slice(11, 16)}</div>
+              <div className="hour-temp">{h.temp_c}°</div>
+              <div className="hour-cond">{h.condition.text}</div>
             </div>
           ))}
         </div>
@@ -65,7 +65,7 @@ export default function SForecastApp() {
             <tr>
               <th>날짜</th>
               <th>날씨</th>
-              <th>최고/최저</th>
+              <th>최고 / 최저</th>
             </tr>
           </thead>
           <tbody>

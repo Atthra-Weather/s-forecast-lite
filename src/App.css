@@ -5,7 +5,7 @@ body {
   color: #fff;
 }
 
-/* 레이아웃 구분 */
+/* 헤더 */
 .header {
   background: #fff;
   color: #000;
@@ -13,59 +13,9 @@ body {
   padding: 1rem 0;
 }
 
-.hourly {
-  background: #00a676;
-  color: #fff;
-  padding: 1rem;
-  text-align: center;
-}
-
-.daily {
-  background: #000;
-  color: #fff;
-  padding: 1rem;
-}
-
-.footer {
-  text-align: center;
-  font-size: 0.8rem;
-  padding: 1rem 0;
-  color: #888;
-}
-
-/* 12시간 예보 카드 */
-.hourly-grid {
-  display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.hour-card {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 6px 10px;
-  font-size: 0.85rem;
-  min-width: 60px;
-}
-
-/* 15일 표 */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.9rem;
-}
-
-th, td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 6px 8px;
-  text-align: center;
-}
-
-thead {
-  background: rgba(255, 255, 255, 0.05);
-  font-weight: bold;
+.header h1 {
+  margin: 0;
+  font-size: 1.6rem;
 }
 
 select {
@@ -75,7 +25,112 @@ select {
   border-radius: 4px;
 }
 
-.loading {
+/* 시간별 */
+.hourly {
+  background: #00a676;
+  color: #fff;
+  padding: 0.8rem;
   text-align: center;
-  padding: 2rem;
+}
+
+.hourly-grid {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.hour-card {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 60px;
+  flex: 1 1 60px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.hour-card:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.hour-time {
+  font-weight: bold;
+}
+
+.hour-temp {
+  font-size: 1rem;
+  margin: 4px 0;
+}
+
+.hour-cond {
+  font-size: 0.8rem;
+}
+
+/* 일별 */
+.daily {
+  background: #000;
+  color: #fff;
+  padding: 1rem;
+  text-align: center;
+}
+
+.daily h2 {
+  margin-bottom: 0.8rem;
+  font-size: 1.2rem;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+th, td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 8px;
+  text-align: center;
+}
+
+thead {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: bold;
+}
+
+/* 푸터 */
+.footer {
+  text-align: center;
+  font-size: 0.8rem;
+  padding: 1rem 0;
+  color: #888;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .header h1 {
+    font-size: 1.3rem;
+  }
+
+  .hourly-grid {
+    gap: 6px;
+  }
+
+  .hour-card {
+    font-size: 0.75rem;
+    min-width: 48px;
+    padding: 6px 8px;
+  }
+
+  .hour-temp {
+    font-size: 0.85rem;
+  }
+
+  .daily h2 {
+    font-size: 1rem;
+  }
+
+  table {
+    font-size: 0.8rem;
+  }
 }
