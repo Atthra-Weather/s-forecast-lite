@@ -1,10 +1,10 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import SForecastApp from "./App";
-import "./App.css";   // ✅ index.css가 아니라 App.css 임 (중요)
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css'
 
-ReactDOM.createRoot(document.getElementById("root")).render(
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <SForecastApp />
-  </React.StrictMode>
-);
+    <App />
+  </React.StrictMode>,
+)
