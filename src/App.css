@@ -1,16 +1,17 @@
 .app {
   font-family: "Noto Sans KR", sans-serif;
-  background-color: #f7f7f7;
-  color: #222;
+  background-color: #ffffff; /* 전체 배경 흰색 */
+  color: #111111; /* 전체 글자 검은색 */
   text-align: center;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
+/* 헤더 */
 .header {
   background: #ffffff;
-  color: #333;
+  color: #111;
   padding: 15px;
   border-bottom: 1px solid #ccc;
 }
@@ -25,11 +26,14 @@
   padding: 6px 12px;
   border: 1px solid #aaa;
   border-radius: 6px;
+  background: #fff;
+  color: #111;
 }
 
+/* 시간별 예보 */
 .hourly-section {
-  background: #2b7a3d;
-  color: #fff;
+  background: #f4f4f4;
+  color: #111;
   padding: 12px 0;
   flex-shrink: 0;
 }
@@ -43,7 +47,8 @@
 
 .hour-card {
   flex: 0 0 auto;
-  background: rgba(255, 255, 255, 0.1);
+  background: #ffffff;
+  border: 1px solid #ddd;
   border-radius: 8px;
   margin: 0 6px;
   padding: 8px;
@@ -55,9 +60,10 @@
   font-size: 0.8rem;
 }
 
+/* 10일 예보 */
 .daily-section {
-  background: #111;
-  color: #eee;
+  background: #ffffff;
+  color: #111;
   padding: 20px;
   flex-grow: 1;
 }
@@ -70,19 +76,20 @@
 
 .daily-section th,
 .daily-section td {
-  border-bottom: 1px solid #444;
+  border-bottom: 1px solid #ccc;
   padding: 6px;
 }
 
 .daily-section th {
   font-weight: bold;
-  color: #7cf57c;
+  color: #111;
 }
 
+/* 푸터 */
 footer {
-  background: #111;
-  color: #ccc; 
+  background: #ffffff;
+  color: #555;
   font-size: 0.8rem;
   padding: 10px 0;
-  border-top: 1px solid #222;
+  border-top: 1px solid #ccc;
 }
