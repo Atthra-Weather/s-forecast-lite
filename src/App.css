@@ -1,88 +1,144 @@
+/* 기본 레이아웃 */
+body {
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f7f8fa;
+  color: #222;
+}
+
 .app {
-  background: #fff;
-  color: #000;
-  font-family: "Pretendard", sans-serif;
-  text-align: center;
+  max-width: 480px;
+  margin: 0 auto;
   padding: 20px;
 }
 
-.header h1 {
-  margin-bottom: 8px;
-}
-
-select {
-  font-size: 14px;
-  padding: 6px 10px;
+/* 도시 선택 */
+.city-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
   margin-bottom: 20px;
 }
 
-/* 공통 제목 스타일 (리듬 예보, 10일 예보) */
-.s-model-section h2,
-.daily-section h2 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.s-model-section {
-  margin: 20px 0 10px;
-  border-top: 1px solid #aaa;
-  padding-top: 10px;
-}
-
-/* 실시간 예보 */
-.forecast-date {
-  font-size: 12px;
-  color: #555;
-  margin-bottom: 5px;
-}
-
-.hourly-scroll {
-  display: flex;
-  overflow-x: auto;
-  gap: 10px;
-  justify-content: center;
-}
-
-.hour-card {
-  border: 1px solid #aaa;
+.city-selector button {
+  border: none;
+  background: #fff;
+  padding: 8px 14px;
   border-radius: 10px;
-  padding: 6px;
-  min-width: 65px;
-  background: #f8f8f8;
-  line-height: 1.1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.small-text p {
-  font-size: 12px;
-  margin: 2px 0;
-  line-height: 1.1;
+.city-selector button:hover {
+  background: #e9ecef;
 }
 
-/* 10일 예보 표 */
-.daily-section table {
-  margin: 0 auto;
+.city-selector button.active {
+  background: #0077ff;
+  color: #fff;
+}
+
+/* 예보 테이블 */
+.forecast-table {
+  width: 100%;
   border-collapse: collapse;
-  width: 90%;
-  max-width: 650px;
-  border-bottom: 1px solid #aaa;
 }
 
-th, td {
-  padding: 8px;
+.forecast-table th,
+.forecast-table td {
+  padding: 10px;
   text-align: center;
-  border-bottom: 1px solid #ccc;
-  border-left: none;
-  border-right: none;
+  font-size: 14px;
 }
 
-.error {
-  color: red;
+.forecast-table th {
+  background: #0077ff;
+  color: white;
+  font-weight: 600;
+}
+
+.forecast-table tr:nth-child(even) {
+  background: #f0f4f8;
+}
+
+/* 리듬 예보 */
+.rhythm-box {
   margin-top: 20px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  text-align: center;
 }
 
-footer {
-  margin-top: 30px;
-  font-size: 12px;
+.rhythm-box h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0077ff;
+}
+
+.rhythm-box p {
+  margin-top: 8px;
+  font-size: 13.5px;
   color: #555;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* 3줄 제한 */
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 반응형 대응 */
+@media (max-width: 768px) {
+  .app {
+    padding: 12px;
+  }
+
+  .city-selector button {
+    padding: 6px 10px;
+    font-size: 13.5px;
+  }
+
+  .forecast-table th, .forecast-table td {
+    padding: 8px;
+    font-size: 13px;
+  }
+
+  .rhythm-box p {
+    font-size: 12.5px;
+  }
+}
+
+@media (max-width: 480px) {
+  .city-selector {
+    gap: 6px;
+  }
+
+  .city-selector button {
+    font-size: 12.5px;
+    padding: 5px 8px;
+  }
+
+  .forecast-table th, .forecast-table td {
+    font-size: 12px;
+    padding: 6px;
+  }
+
+  .rhythm-box {
+    padding: 12px;
+  }
+
+  .rhythm-box h3 {
+    font-size: 14px;
+  }
+
+  .rhythm-box p {
+    -webkit-line-clamp: 3; /* 항상 3줄 고정 */
+    font-size: 12.5px;
+  }
 }
