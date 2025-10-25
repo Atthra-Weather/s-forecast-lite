@@ -6,20 +6,20 @@ export default function App() {
   const API_KEY = "8370f7e693e34a79bdd180327252510";
 
   // 한글 표기 + 영문 호출 + 좌표 (정밀도↑)
- const CITY_MAP = {
-  서울: { name: "Seoul", lat: 37.5, alt: 50 },
-  수원: { name: "Suwon", lat: 37.3, alt: 45 },
-  용인: { name: "Yongin", lat: 37.2, alt: 70 }, 
-  안산: { name: "Ansan", lat: 37.3, alt: 20 },
-  안양: { name: "Anyang", lat: 37.4, alt: 40 },
-  강릉: { name: "Gangneung", lat: 37.7, alt: 80 },
-  부산: { name: "Busan", lat: 35.2, alt: 10 },
-  오사카: { name: "Osaka", lat: 34.7, alt: 20 },
-  후쿠오카: { name: "Fukuoka", lat: 33.6, alt: 10 },
-  유후인: { name: "Yufuin", lat: 33.3, alt: 60 },
-  나고야: { name: "Nagoya", lat: 35.1, alt: 40 },
-  미쓰야마: { name: "Matsuyama", lat: 33.8, alt: 50 },
-};
+  const CITY = {
+    서울:   { name_en: "Seoul",   lat: 37.5665, lon: 126.9780 },
+    수원:   { name_en: "Suwon",   lat: 37.2636, lon: 127.0286 },
+    용인:   { name_en: "Yongin",  lat: 37.2, alt: 70 },
+    안산:   { name_en: "Ansan",   lat: 37.3219, lon: 126.8309 },
+    안양:   { name_en: "Anyang",  lat: 37.3943, lon: 126.9568 },
+    강릉:   { name_en: "Gangneung", lat: 37.7519, lon: 128.8761 },
+    부산:   { name_en: "Busan",   lat: 35.1796, lon: 129.0756 },
+    오사카: { name_en: "Osaka",   lat: 34.6937, lon: 135.5023 },
+    후쿠오카:{ name_en: "Fukuoka", lat: 33.5902, lon: 130.4017 },
+    유후인: { name_en: "Yufuin",  lat: 33.2659, lon: 131.3461 },
+    나고야: { name_en: "Nagoya",  lat: 35.1815, lon: 136.9066 },
+    마쓰야마:{ name_en: "Matsuyama", lat: 33.8393, lon: 132.7657 },
+  };
   const CITY_NAMES = Object.keys(CITY);
 
   const [city, setCity] = useState("수원");
