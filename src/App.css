@@ -1,118 +1,105 @@
 body {
-  background: #fff;
-  color: #111;
-  font-family: "Noto Sans KR", sans-serif;
+  font-family: "HYSMyeongJo-Medium", serif;
+  background: #f7f7f7;
+  color: #222;
   margin: 0;
   padding: 0;
   text-align: center;
 }
 
-.app-title {
-  margin-top: 20px;
-  font-weight: 700;
+.App {
+  padding: 1.5rem;
+  max-width: 900px;
+  margin: auto;
 }
 
-.city-selector {
-  margin: 15px 0;
+h1 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
 }
 
-.realtime-status {
-  margin: 25px auto;
-  max-width: 90%;
-  line-height: 1.4;
-}
-
-.realtime-status h2 {
-  font-size: 1.2rem;
-  margin-bottom: 8px;
-}
-
-.realtime-status .state {
+h2 {
   font-size: 1.1rem;
-  font-weight: bold;
-  color: #333;
+  margin-top: 2.2rem;
+  margin-bottom: 0.3rem;
 }
 
-.realtime-status .desc {
-  font-size: 0.95rem;
-  margin-top: 6px;
-  line-height: 1.5;
-  white-space: normal;
-  word-break: keep-all;
-  max-width: 90%;
-  margin-left: auto;
-  margin-right: auto;
+h3 {
+  font-size: 1rem;
+  margin-top: 0.2rem;
 }
 
-.hourly-status {
-  margin-top: 10px;
+.date-label {
+  font-size: 0.8rem;
+  color: #555;
+  margin-bottom: 0.2rem;
+}
+
+.desc {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.selector {
+  margin-bottom: 1rem;
+}
+
+.hourly {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 6px;
-  font-size: 0.85rem;
+  margin: 0 auto 1.8rem;
 }
 
-.hour-item {
-  background: #f3f3f3;
-  border-radius: 6px;
+.hour-box {
+  background: #fff;
+  border-radius: 10px;
   padding: 4px 8px;
+  width: 62px;
+  line-height: 1.1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
-.forecast-table {
-  margin: 0 auto 40px;
-  width: 95%;
-  overflow-x: auto;
+.hour-box p {
+  margin: 0;
 }
 
-.forecast-table h2 {
-  font-size: 1.1rem;
-  margin-bottom: 10px;
+.hour-box .tiny {
+  font-size: 0.75rem;
+  color: #333;
 }
 
+/* 표 */
 table {
   width: 100%;
   border-collapse: collapse;
+  margin: 1rem auto;
+  font-size: 0.9rem;
 }
 
 th, td {
-  padding: 6px;
+  padding: 8px 5px;
   border-bottom: 1px solid #ddd;
 }
 
-th {
-  background: #f4f4f4;
-  font-weight: 600;
+thead {
+  background-color: #fff;
+  font-weight: bold;
 }
 
 footer {
-  margin: 20px 0;
-  font-size: 0.8rem;
-  color: #555;
+  font-size: 0.75rem;
+  margin-top: 2rem;
+  color: #777;
 }
 
-@media (max-width: 768px) {
-  .realtime-status .desc {
-    font-size: 0.9rem;
-    line-height: 1.4;
-  }
-  table th, table td {
-    font-size: 0.8rem;
-    padding: 4px;
-  }
-}
-
-@media (max-width: 480px) {
-  .realtime-status .desc {
-    font-size: 0.85rem;
-    line-height: 1.3;
-    max-width: 95%;
-  }
-  .hour-item {
-    font-size: 0.8rem;
-    padding: 3px 6px;
-  }
-  th, td {
-    font-size: 0.75rem;
-  }
+/* --- 반응형 --- */
+@media (max-width: 600px) {
+  h1 { font-size: 1.4rem; }
+  h2 { font-size: 1rem; }
+  h3 { font-size: 0.9rem; }
+  .hour-box { width: 60px; font-size: 0.7rem; }
+  table { font-size: 0.8rem; }
+  th, td { padding: 6px 3px; }
 }
