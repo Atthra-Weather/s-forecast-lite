@@ -1,3 +1,4 @@
+// App.jsx — S-Forecast ver.2.6 (한글표시 + Adaptive Precision Edition)
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
@@ -17,122 +18,131 @@ export default function App() {
     { name: "미쓰야마", query: "Matsuyama" }
   ];
 
-  const [forecast, setForecast] = useState({});
-  const [loading, setLoading] = useState(true);
+  const [city, setCity] = useState(cities[0]);
+  const [forecast, setForecast] = useState([]);
+  const [current, setCurrent] = useState(null);
+  const [status, setStatus] = useState("");
 
-  const API_KEY = "74f3c722bf494188b92132611252510"; // WeatherAPI key
-  const α = 0.7, β = 0.5;
-
-  // 리듬 기반 S 계산 (습도, 구름, 온도)
-  function computeS(h) {
-    const hum = h.humidity ?? 0;
-    const cloud = h.cloud ?? 0;
-    const temp = h.temp_c ?? 0;
-    const S = (0.6 * hum + 0.4 * cloud) / 100 - 0.002 * temp;
-    return Math.max(0, Math.min(1, S));
-  }
-
-  // 비 과예측 완화
-  function softenIfNoPrecip(label, precip_mm, humidity, cloud) {
-    if ((precip_mm ?? 0) < 0.1 && humidity < 86 && cloud < 80) {
-      if (label.includes("비")) return "대체로 흐림 (비 가능성 약함)";
-    }
-    return label;
-  }
-
-  // S→자연어 예보
-  function labelFromS(S, isDaily = false) {
-    if (!isDaily) {
-      if (S < 0.45) return "맑음";
-      if (S < 0.85) return "흐림";
-      return "비";
-    }
-    if (S < 0.32) return "맑음";
-    if (S < 0.50) return "대체로 맑음";
-    if (S < 0.65) return "가끔 구름 많음";
-    if (S < 0.80) return "대체로 흐림";
-    if (S < 0.92) return "비 또는 소나기";
-    return "비";
-  }
-
-  // 도시별 데이터 호출
-  async function getWeather(cityQuery) {
-    const res = await fetch(
-      `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${cityQuery}&days=7&lang=ko`
-    );
-    const data = await res.json();
-    return data;
-  }
-
-  // 전체 병렬 로딩
-  async function loadAll() {
-    setLoading(true);
-    const results = await Promise.all(
-      cities.map(async ({ name, query }) => {
-        try {
-          const data = await getWeather(query);
-          const hours = data.forecast.forecastday[0].hour;
-          const Slist = hours.map(h => computeS(h));
-          const Smean = Slist.reduce((a, b) => a + b, 0) / Slist.length;
-
-          const d = data.forecast.forecastday[0].day;
-          const condBase = labelFromS(Smean, true);
-          const cond = softenIfNoPrecip(
-            condBase,
-            d.totalprecip_mm ?? 0,
-            d.avghumidity ?? 0,
-            d.daily_chance_of_rain ?? 0
-          );
-
-          const tAvg = d.avgtemp_c;
-          const tMax = (tAvg + α * Smean).toFixed(1);
-          const tMin = (tAvg - β * Smean).toFixed(1);
-
-          return {
-            name,
-            condition: cond,
-            temp: `${tMin}° / ${tMax}°`,
-            icon: d.condition?.icon ?? ""
-          };
-        } catch (err) {
-          console.error(name, "에러:", err);
-          return { name, condition: "데이터 오류", temp: "-", icon: "" };
-        }
-      })
-    );
-
-    const obj = {};
-    results.forEach(r => (obj[r.name] = r));
-    setForecast(obj);
-    setLoading(false);
-  }
+  // === Adaptive Navier Rhythm Parameters ===
+  const alpha = 0.82;
+  const beta = 0.68;
+  const gamma = 0.03;
+  const kappa = 1.45;
+  const dt = 0.01;
 
   useEffect(() => {
-    loadAll();
-  }, []);
+    fetchWeather(city.query);
+  }, [city]);
+
+  async function fetchWeather(cityName) {
+    try {
+      const apiKey = "74f3c722bf494188b92132611252510";
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${cityName}&days=7&aqi=no&alerts=no&lang=ko`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      if (data && data.forecast) {
+        setForecast(data.forecast.forecastday);
+        setCurrent(data.current);
+        const rhythm = computeRhythm(data.forecast.forecastday);
+        setStatus(rhythm);
+      }
+    } catch (e) {
+      console.error("Weather fetch error:", e);
+      setStatus("데이터를 불러오지 못했습니다.");
+    }
+  }
+
+  // === Adaptive Navier Rhythm Model ===
+  function computeRhythm(days) {
+    const temps = days.map((d) => d.day.avgtemp_c);
+    const hums = days.map((d) => d.day.avghumidity);
+    const winds = days.map((d) => d.day.maxwind_kph);
+
+    const n = temps.length;
+    const normT = temps.map((t) => (t - Math.min(...temps)) / (Math.max(...temps) - Math.min(...temps) + 1e-6));
+    const normH = hums.map((h) => h / 100);
+    const normW = winds.map((w) => w / Math.max(...winds));
+
+    let rho = 0.5, S = 0.0;
+    for (let i = 0; i < n; i++) {
+      const T = normT[i];
+      const H = normH[i];
+      const W = normW[i];
+
+      const α = alpha + 0.2 * (T - 0.5);
+      const β = beta + 0.1 * (H - 0.5);
+      const η = 0.05 + 0.1 * W;
+
+      const lam_up = α * rho;
+      const lam_down = β * (1 - rho);
+      const drho = -gamma * rho + (lam_up - lam_down) * rho - η * Math.max(0, rho - 0.4);
+      rho += drho * dt;
+
+      const dS = (lam_up - lam_down) * kappa;
+      S += dS * dt;
+    }
+
+    const ratio = (S - 0.5) * 2.2;
+    if (ratio < -0.5) return "안정 — 대체로 맑음";
+    if (ratio < 0.2) return "평형 — 구름 많음";
+    if (ratio < 0.8) return "불안정 — 오후 한때 소나기 가능";
+    return "활성 — 비 또는 흐림";
+  }
 
   return (
     <div className="App">
-      <h2>S-Forecast ver.2.6n3 — Regional Resonance (KOR–ENG Mapping)</h2>
-      {loading ? (
-        <p>날씨 데이터를 불러오는 중...</p>
-      ) : (
-        <div className="grid">
-          {cities.map(({ name }) => {
-            const f = forecast[name];
-            if (!f) return <div key={name} className="card">{name}: -</div>;
-            return (
-              <div key={name} className="card">
-                <h3>{name}</h3>
-                <p>{f.condition}</p>
-                <p>{f.temp}</p>
-                {f.icon && <img src={f.icon} alt={f.condition} />}
-              </div>
-            );
-          })}
+      <h1>S-Forecast ver.2.6</h1>
+
+      <div className="selector">
+        <label>도시 선택: </label>
+        <select
+          value={city.query}
+          onChange={(e) => setCity(cities.find((c) => c.query === e.target.value))}
+        >
+          {cities.map((c) => (
+            <option key={c.query} value={c.query}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* 🔹 선택된 도시명 표시 */}
+      <p className="city-name">{city.name}</p>
+
+      {current && (
+        <div className="current">
+          <p className="date">{new Date(current.last_updated).toLocaleDateString("ko-KR")}</p>
+          <p className="temp">현재 온도 {current.temp_c}°C, 습도 {current.humidity}%</p>
+          <p className="status">{status}</p>
         </div>
       )}
-      <button onClick={loadAll}>새로고침</button>
+
+      <table className="forecast">
+        <thead>
+          <tr>
+            <th>날짜</th>
+            <th>날씨</th>
+            <th>최고/최저</th>
+          </tr>
+        </thead>
+        <tbody>
+          {forecast.map((day) => (
+            <tr key={day.date}>
+              <td>{new Date(day.date).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</td>
+              <td>{day.day.condition.text}</td>
+              <td>
+                {Math.round(day.day.maxtemp_c)}° / {Math.round(day.day.mintemp_c)}°
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      <footer>
+        <p>Glitch Factory — Adaptive Navier Model</p>
+      </footer>
     </div>
   );
 }
