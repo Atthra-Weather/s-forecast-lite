@@ -76,12 +76,12 @@
 
 .daily-section th {
   font-weight: bold;
-  color: #a5f3a1;
+  color: #7cf57c;
 }
 
 footer {
   background: #111;
-  color: #999;
+  color: #ccc; 
   font-size: 0.8rem;
   padding: 10px 0;
   border-top: 1px solid #222;
