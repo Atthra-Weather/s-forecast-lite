@@ -1,136 +1,88 @@
-body {
-  margin: 0;
-  font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
-  background: #000;
-  color: #fff;
+.app {
+  font-family: "Noto Sans KR", sans-serif;
+  background-color: #f7f7f7;
+  color: #222;
+  text-align: center;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-/* 헤더 */
 .header {
-  background: #fff;
-  color: #000;
-  text-align: center;
-  padding: 1rem 0;
+  background: #ffffff;
+  color: #333;
+  padding: 15px;
+  border-bottom: 1px solid #ccc;
 }
 
 .header h1 {
   margin: 0;
-  font-size: 1.6rem;
-}
-
-select {
-  margin-top: 0.5rem;
-  padding: 0.3rem 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-/* 시간별 */
-.hourly {
-  background: #00a676;
-  color: #fff;
-  padding: 0.8rem;
-  text-align: center;
-}
-
-.hourly-grid {
-  display: flex;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.hour-card {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
-  padding: 8px 12px;
-  min-width: 60px;
-  flex: 1 1 60px;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-}
-
-.hour-card:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.hour-time {
-  font-weight: bold;
-}
-
-.hour-temp {
-  font-size: 1rem;
-  margin: 4px 0;
-}
-
-.hour-cond {
-  font-size: 0.8rem;
-}
-
-/* 일별 */
-.daily {
-  background: #000;
-  color: #fff;
-  padding: 1rem;
-  text-align: center;
-}
-
-.daily h2 {
-  margin-bottom: 0.8rem;
   font-size: 1.2rem;
 }
 
-table {
+.header select {
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+}
+
+.hourly-section {
+  background: #2b7a3d;
+  color: #fff;
+  padding: 12px 0;
+  flex-shrink: 0;
+}
+
+.hourly-scroll {
+  display: flex;
+  overflow-x: auto;
+  padding: 0 10px;
+  scrollbar-width: none;
+}
+
+.hour-card {
+  flex: 0 0 auto;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin: 0 6px;
+  padding: 8px;
+  min-width: 70px;
+}
+
+.hour-card p {
+  margin: 2px 0;
+  font-size: 0.8rem;
+}
+
+.daily-section {
+  background: #111;
+  color: #eee;
+  padding: 20px;
+  flex-grow: 1;
+}
+
+.daily-section table {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
 
-th, td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 8px;
-  text-align: center;
+.daily-section th,
+.daily-section td {
+  border-bottom: 1px solid #444;
+  padding: 6px;
 }
 
-thead {
-  background: rgba(255, 255, 255, 0.05);
+.daily-section th {
   font-weight: bold;
+  color: #a5f3a1;
 }
 
-/* 푸터 */
-.footer {
-  text-align: center;
+footer {
+  background: #111;
+  color: #999;
   font-size: 0.8rem;
-  padding: 1rem 0;
-  color: #888;
-}
-
-/* 반응형 */
-@media (max-width: 768px) {
-  .header h1 {
-    font-size: 1.3rem;
-  }
-
-  .hourly-grid {
-    gap: 6px;
-  }
-
-  .hour-card {
-    font-size: 0.75rem;
-    min-width: 48px;
-    padding: 6px 8px;
-  }
-
-  .hour-temp {
-    font-size: 0.85rem;
-  }
-
-  .daily h2 {
-    font-size: 1rem;
-  }
-
-  table {
-    font-size: 0.8rem;
-  }
+  padding: 10px 0;
+  border-top: 1px solid #222;
 }

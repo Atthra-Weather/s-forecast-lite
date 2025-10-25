@@ -1,84 +1,104 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
-export default function SForecastApp() {
-  const [weatherData, setWeatherData] = useState(null);
-  const cities = [
-    "Seoul", "Ansan", "Anyang", "Yongin", "Suwon", "Incheon",
-    "Gangneung", "Busan", "Osaka", "Fukuoka", "Yufuin",
-    "Matsuyama", "Sapporo", "Nagoya"
-  ];
-  const [selectedCity, setSelectedCity] = useState("Seoul");
+const API_KEY = "8370f7e693e34a79bdd180327252510";
+const cities = [
+  "서울", "안산", "안양", "용인", "수원", "인천",
+  "강릉", "부산", "오사카", "후쿠오카", "유후인",
+  "마쓰야마", "사포로", "나고야"
+];
+
+export default function App() {
+  const [selectedCity, setSelectedCity] = useState("서울");
+  const [hourly, setHourly] = useState([]);
+  const [daily, setDaily] = useState([]);
 
   useEffect(() => {
-    async function fetchWeather() {
-      const apiKey = "7530188453a94bb689d172152252510";
-      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${selectedCity}&days=15&aqi=no&alerts=no&lang=ko`;
-      const res = await fetch(url);
-      const data = await res.json();
-      setWeatherData(data);
-    }
-    fetchWeather();
+    fetchWeather(selectedCity);
   }, [selectedCity]);
 
-  if (!weatherData) return <div className="loading">로딩 중...</div>;
+  const fetchWeather = async (city) => {
+    try {
+      const res = await fetch(
+        `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${city}&days=10&lang=ko`
+      );
+      const data = await res.json();
 
-  const currentTime = new Date().getHours();
+      const now = new Date();
+      const currentHour = now.getHours();
 
-  const hourly = weatherData.forecast.forecastday[0].hour
-    .filter(h => {
-      const hour = new Date(h.time).getHours();
-      return hour >= currentTime && hour <= currentTime + 12 && hour % 2 === 0;
-    });
+      // 12시간 (2시간 간격)
+      const hourlyData = data.forecast.forecastday[0].hour
+        .filter((_, i) => i % 2 === 0 && i >= currentHour && i <= currentHour + 12)
+        .map((h) => ({
+          time: h.time.split(" ")[1],
+          temp: Math.round(h.temp_c),
+          condition: h.condition.text
+        }));
 
-  const daily = weatherData.forecast.forecastday;
+      // 10일 요약
+      const dailyData = data.forecast.forecastday.map((d) => ({
+        date: d.date,
+        avgTemp: Math.round(d.day.avgtemp_c),
+        condition: d.day.condition.text
+      }));
+
+      setHourly(hourlyData);
+      setDaily(dailyData);
+    } catch (err) {
+      console.error("Error fetching weather:", err);
+    }
+  };
 
   return (
-    <div className="app-container">
+    <div className="app">
       <header className="header">
         <h1>S-Forecast Lite</h1>
-        <select value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
-          {cities.map(c => (
-            <option key={c} value={c}>{c}</option>
+        <select
+          value={selectedCity}
+          onChange={(e) => setSelectedCity(e.target.value)}
+        >
+          {cities.map((c) => (
+            <option key={c}>{c}</option>
           ))}
         </select>
       </header>
 
-      <section className="hourly">
-        <div className="hourly-grid">
+      <section className="hourly-section">
+        <div className="hourly-scroll">
           {hourly.map((h, i) => (
             <div key={i} className="hour-card">
-              <div className="hour-time">{h.time.slice(11, 16)}</div>
-              <div className="hour-temp">{h.temp_c}°</div>
-              <div className="hour-cond">{h.condition.text}</div>
+              <p>{h.time}</p>
+              <p>{h.temp}°C</p>
+              <p className="condition">{h.condition}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="daily">
-        <h2>15일 예보</h2>
+      <section className="daily-section">
+        <h2>10일 예보</h2>
         <table>
           <thead>
             <tr>
               <th>날짜</th>
+              <th>평균기온</th>
               <th>날씨</th>
-              <th>최고 / 최저</th>
             </tr>
           </thead>
           <tbody>
             {daily.map((d, i) => (
               <tr key={i}>
                 <td>{d.date}</td>
-                <td>{d.day.condition.text}</td>
-                <td>{d.day.maxtemp_c}° / {d.day.mintemp_c}°</td>
+                <td>{d.avgTemp}°C</td>
+                <td>{d.condition}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </section>
 
-      <footer className="footer">© 2025 Glitch Factory</footer>
+      <footer>© 2025 Atthra Weather · Glitch Factory</footer>
     </div>
   );
 }
