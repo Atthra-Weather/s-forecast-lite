@@ -1,4 +1,4 @@
-// App.jsx — S-Forecast ver.2.7β — All-Region Precision Edition
+// App.jsx — S-Forecast ver.2.7 (12시간 실시간)
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
@@ -34,7 +34,6 @@ export default function App() {
     return `${base} (${WEEK[d.getDay()]})`;
   };
 
-  // 세밀 microgrid ±0.03° 3포인트
   function microgrid(lat, lon, d = 0.03) {
     return [
       { lat, lon },
@@ -51,7 +50,6 @@ export default function App() {
     const diurnal = Math.sin(temp / 7) * 0.6;
     const interact = 0.4 * h * c + 0.25 * w * c;
     let s = Math.abs(0.9*diurnal + 0.7*h + 0.5*c + 0.4*w + interact);
-    // 해발/위도 보정
     s *= (1 - alt/1000*0.05) * (1 + 0.002 * (lat - 35));
     return Math.min(3, s * 1.2);
   }
@@ -70,10 +68,8 @@ export default function App() {
     return "비 또는 천둥";
   }
 
-  function rainCorrection(rain, temp, humidity, cloud) {
-    if (rain < 0.2) return 0;
-    if (humidity < 70 && cloud < 70) return 0;
-    if (temp > 25 && humidity < 60) return 0;
+  function rainCorrection(rain, chance) {
+    if (rain < 0.1 && chance < 10) return 0; // UI에서만 “비 가능성 거의 없음” 처리
     return rain;
   }
 
@@ -98,6 +94,7 @@ export default function App() {
         wind_kph: avg("wind_kph"),
         cloud: avg("cloud"),
         precip_mm: avg("precip_mm"),
+        chance_of_rain: avg("chance_of_rain"),
       };
     });
   }
@@ -156,14 +153,20 @@ export default function App() {
       const temps = smooth(hourlyMerged, "temp_c");
       const hums  = smooth(hourlyMerged, "humidity");
 
-      const next6 = hourlyMerged.filter(h=>{
+      // --- 12시간 실시간 ---
+      const next12 = hourlyMerged.filter(h=>{
         const hh = new Date(h.time.replace(" ","T")).getHours();
         const diff = (hh - nowH + 24) % 24;
-        return diff >= 0 && diff < 6;
+        return diff >= 0 && diff < 12;
       }).map((h,i) => {
         const S = computeS({ temp:temps[i], humidity:hums[i], wind:h.wind_kph??0, cloud:h.cloud??0, lat, alt });
-        const rain = rainCorrection(h.precip_mm ?? 0, h.temp_c, h.humidity, h.cloud ?? 50);
-        const condition = rain > 0 ? "비" : labelFromS(S,false);
+        const rain = rainCorrection(h.precip_mm ?? 0, h.chance_of_rain ?? 0);
+        let condition = labelFromS(S,false);
+        if (rain === 0 && h.precip_mm > 0) {
+          condition = "대체로 흐림 (비 가능성 거의 없음)";
+        } else if (rain > 0) {
+          condition = "비";
+        }
         return { time: h.time.slice(-5), temp: h.temp_c, humidity: h.humidity, condition };
       });
 
@@ -176,7 +179,7 @@ export default function App() {
         city_en: name_en,
       };
 
-      setHourly(next6);
+      setHourly(next12);
       setForecast(daysMerged);
       setCurrent(curr);
       setStatus(summarizeRhythm(daysMerged, lat, alt));
@@ -191,7 +194,7 @@ export default function App() {
 
   return (
     <div className="App">
-      <h1>S-Forecast ver.2.7β — All-Region Precision</h1>
+      <h1>S-Forecast ver.2.7</h1>
 
       <div className="selector">
         <label>도시 선택: </label>
@@ -200,7 +203,7 @@ export default function App() {
         </select>
       </div>
 
-      <h2>6시간 리듬 예보 — {city}</h2>
+      <h2>12시간 리듬 예보 — {city}</h2>
       <div className="hourly">
         {hourly.length === 0 ? (
           <p className="tiny">시간별 데이터를 불러오는 중…</p>
@@ -220,6 +223,7 @@ export default function App() {
             <th>날짜(요일)</th>
             <th>상태</th>
             <th>최고 / 최저</th>
+            <th>습도(%)</th>
           </tr>
         </thead>
         <tbody>
@@ -228,6 +232,7 @@ export default function App() {
               <td>{dayStr(d.date)}</td>
               <td>{d.day.condition?.text}</td>
               <td>{Math.round(d.day.maxtemp_c)}° / {Math.round(d.day.mintemp_c)}°</td>
+              <td>{Math.round(d.day.avghumidity)}</td>
             </tr>
           ))}
         </tbody>
