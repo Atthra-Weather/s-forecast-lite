@@ -36,7 +36,7 @@ export default function App() {
 
   async function fetchWeather(cityName) {
     try {
-      const apiKey = "74f3c722bf494188b92132611252510";
+      const apiKey = "8370f7e693e34a79bdd180327252510";
       const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${cityName}&days=7&aqi=no&alerts=no&lang=ko`;
       const res = await fetch(url);
       const data = await res.json();
