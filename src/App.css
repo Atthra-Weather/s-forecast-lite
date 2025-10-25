@@ -1,95 +1,63 @@
 .app {
-  font-family: "Noto Sans KR", sans-serif;
-  background-color: #ffffff; /* 전체 배경 흰색 */
-  color: #111111; /* 전체 글자 검은색 */
+  background: #fff;
+  color: #000;
+  font-family: "Pretendard", sans-serif;
   text-align: center;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 헤더 */
-.header {
-  background: #ffffff;
-  color: #111;
-  padding: 15px;
-  border-bottom: 1px solid #ccc;
+  padding: 20px;
 }
 
 .header h1 {
-  margin: 0;
-  font-size: 1.2rem;
+  margin-bottom: 10px;
 }
 
-.header select {
-  margin-top: 8px;
-  padding: 6px 12px;
-  border: 1px solid #aaa;
-  border-radius: 6px;
-  background: #fff;
-  color: #111;
+select {
+  font-size: 14px;
+  padding: 6px 10px;
+  margin-bottom: 20px;
 }
 
-/* 시간별 예보 */
+/* 실시간 리듬 예보 중앙정렬 */
+.s-model-section {
+  margin: 20px 0;
+  text-align: center;
+  border-top: 1px solid #aaa;
+  padding-top: 10px;
+}
+
 .hourly-section {
-  background: #f4f4f4;
-  color: #111;
-  padding: 12px 0;
-  flex-shrink: 0;
+  margin: 20px 0;
 }
 
 .hourly-scroll {
   display: flex;
   overflow-x: auto;
-  padding: 0 10px;
-  scrollbar-width: none;
+  gap: 10px;
+  justify-content: center;
 }
 
 .hour-card {
-  flex: 0 0 auto;
-  background: #ffffff;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  margin: 0 6px;
-  padding: 8px;
-  min-width: 70px;
-}
-
-.hour-card p {
-  margin: 2px 0;
-  font-size: 0.8rem;
-}
-
-/* 10일 예보 */
-.daily-section {
-  background: #ffffff;
-  color: #111;
-  padding: 20px;
-  flex-grow: 1;
+  border: 1px solid #aaa;
+  border-radius: 10px;
+  padding: 10px;
+  min-width: 80px;
+  background: #f8f8f8;
 }
 
 .daily-section table {
-  width: 100%;
+  margin: 0 auto;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  width: 90%;
+  max-width: 600px;
 }
 
-.daily-section th,
-.daily-section td {
-  border-bottom: 1px solid #ccc;
-  padding: 6px;
+th, td {
+  border: 1px solid #aaa;
+  padding: 8px;
+  text-align: center;
 }
 
-.daily-section th {
-  font-weight: bold;
-  color: #111;
-}
-
-/* 푸터 */
 footer {
-  background: #ffffff;
+  margin-top: 30px;
+  font-size: 12px;
   color: #555;
-  font-size: 0.8rem;
-  padding: 10px 0;
-  border-top: 1px solid #ccc;
 }

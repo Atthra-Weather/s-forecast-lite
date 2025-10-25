@@ -21,10 +21,40 @@ const cityMap = {
   "나고야": "Nagoya"
 };
 
+// ✅ 나비에-S 모델 (리듬 분석)
+function s_forecast_report(time, tempSeries) {
+  if (tempSeries.length < 2) return { state: "데이터 부족", desc: "예보 분석 불가" };
+  const mean = tempSeries.reduce((a, b) => a + b, 0) / tempSeries.length;
+  const std =
+    Math.sqrt(
+      tempSeries.map(t => Math.pow(t - mean, 2)).reduce((a, b) => a + b, 0) /
+      tempSeries.length
+    ) || 1;
+  const ratio = (tempSeries[tempSeries.length - 1] - mean) / std;
+
+  let state, desc;
+  if (ratio < -0.5) {
+    state = "안정 ☀️";
+    desc = "리듬이 평형을 유지하고 있습니다. 대체로 맑고 고요한 날씨가 예상됩니다.";
+  } else if (ratio < 0.5) {
+    state = "평형 🌤";
+    desc = "리듬이 완만한 진동 범위 내에 있습니다. 구름 많고 변화가 적은 하루가 예상됩니다.";
+  } else if (ratio < 1.5) {
+    state = "불안정 🌧";
+    desc = "리듬이 상승하고 있습니다. 오후 이후 대류 활동과 국지적 소나기가 가능성 있습니다.";
+  } else {
+    state = "폭풍 ⚡️";
+    desc = "리듬이 격렬하게 교호 중입니다. 강한 비나 돌풍 가능성이 있습니다.";
+  }
+
+  return { state, desc };
+}
+
 export default function App() {
   const [selectedCity, setSelectedCity] = useState("서울");
   const [hourly, setHourly] = useState([]);
   const [daily, setDaily] = useState([]);
+  const [sResult, setSResult] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
@@ -33,23 +63,15 @@ export default function App() {
 
   const fetchWeather = async (city) => {
     try {
-      const query = cityMap[city] || city; // 영문 도시명 변환
-      console.log(`📡 Fetching weather for: ${query}`);
-
+      const query = cityMap[city] || city;
       const res = await fetch(
         `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${query}&days=10&lang=ko`
       );
-
-      if (!res.ok) {
-        throw new Error(`HTTP Error: ${res.status}`);
-      }
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
 
       const data = await res.json();
-      console.log("✅ WeatherAPI Response:", data);
-
-      if (!data.forecast || !data.forecast.forecastday) {
+      if (!data.forecast || !data.forecast.forecastday)
         throw new Error(`No forecast data for "${query}"`);
-      }
 
       const hourlyData = data.forecast.forecastday[0].hour
         .filter((_, i) => i % 3 === 0)
@@ -65,6 +87,12 @@ export default function App() {
         condition: d.day.condition.text
       }));
 
+      // ✅ S-모델 계산
+      const tempSeq = hourlyData.map(h => h.temp);
+      const timeSeq = hourlyData.map(h => h.time);
+      const s_out = s_forecast_report(timeSeq, tempSeq);
+      setSResult(s_out);
+
       setHourly(hourlyData);
       setDaily(dailyData);
       setError(null);
@@ -73,6 +101,7 @@ export default function App() {
       setError(err.message);
       setHourly([]);
       setDaily([]);
+      setSResult(null);
     }
   };
 
@@ -96,6 +125,16 @@ export default function App() {
         </p>
       ) : (
         <>
+          {/* ✅ 실시간 리듬 예보 (가운데 정렬) */}
+          {sResult && (
+            <section className="s-model-section">
+              <h2>리듬 예보</h2>
+              <p><strong>{sResult.state}</strong></p>
+              <p>{sResult.desc}</p>
+            </section>
+          )}
+
+          {/* ✅ 3시간 간격 실시간 예보 */}
           <section className="hourly-section">
             <div className="hourly-scroll">
               {hourly.map((h, i) => (
@@ -108,6 +147,7 @@ export default function App() {
             </div>
           </section>
 
+          {/* ✅ 10일 예보 */}
           <section className="daily-section">
             <h2>10일 예보</h2>
             <table>
