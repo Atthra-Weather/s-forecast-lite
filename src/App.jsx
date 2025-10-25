@@ -8,12 +8,11 @@ export default function SForecastApp() {
     "Gangneung", "Busan", "Osaka", "Fukuoka", "Yufuin",
     "Matsuyama", "Sapporo", "Nagoya"
   ];
-
   const [selectedCity, setSelectedCity] = useState("Seoul");
 
   useEffect(() => {
     async function fetchWeather() {
-      const apiKey = "YOUR_WEATHERAPI_KEY";
+      const apiKey = "7530188453a94bb689d172152252510";
       const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${selectedCity}&days=15&aqi=no&alerts=no&lang=ko`;
       const res = await fetch(url);
       const data = await res.json();
@@ -30,8 +29,7 @@ export default function SForecastApp() {
     .filter(h => {
       const hour = new Date(h.time).getHours();
       return hour >= currentTime && hour <= currentTime + 12 && hour % 2 === 0;
-    })
-    .slice(0, 6);
+    });
 
   const daily = weatherData.forecast.forecastday;
 
