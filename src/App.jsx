@@ -1,84 +1,86 @@
 import React, { useEffect, useState } from "react";
-import "./App.css";
 
-const cities = [
-  "서울", "안산", "안양", "용인", "수원", "인천", "강릉",
-  "부산", "오사카", "후쿠오카", "유후인", "마쓰야마", "사포로", "나고야"
-];
+export default function SForecastApp() {
+  const [weatherData, setWeatherData] = useState(null);
+  const cities = [
+    "Seoul", "Ansan", "Anyang", "Yongin", "Suwon", "Incheon",
+    "Gangneung", "Busan", "Osaka", "Fukuoka", "Yufuin",
+    "Matsuyama", "Sapporo", "Nagoya"
+  ];
 
-export default function App() {
-  const [city, setCity] = useState("서울");
-  const [forecast, setForecast] = useState(null);
-
-  const apiKey = "YOUR_WEATHER_API_KEY"; // 👉 여기에 WeatherAPI 키 넣기
+  const [selectedCity, setSelectedCity] = useState("Seoul");
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await fetch(
-          `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${city}&days=15&aqi=no&alerts=no&lang=ko`
-        );
-        const data = await res.json();
-        setForecast(data);
-      } catch (error) {
-        console.error("API 오류:", error);
-      }
+    async function fetchWeather() {
+      const apiKey = "YOUR_WEATHERAPI_KEY";
+      const url = `https://api.weatherapi.com/v1/forecast.json?key=${apiKey}&q=${selectedCity}&days=15&aqi=no&alerts=no&lang=ko`;
+      const res = await fetch(url);
+      const data = await res.json();
+      setWeatherData(data);
     }
-    fetchData();
-  }, [city]);
+    fetchWeather();
+  }, [selectedCity]);
 
-  if (!forecast) return <div className="loading">날씨 데이터를 불러오는 중...</div>;
+  if (!weatherData) return <div className="loading">로딩 중...</div>;
 
-  // 시간별 예보 (12시간, 2시간 간격)
-  const currentHour = new Date().getHours();
-  const hourly = forecast.forecast.forecastday[0].hour
-    .filter((_, i) => i >= currentHour && i < currentHour + 12 && i % 2 === 0);
+  const currentTime = new Date().getHours();
 
-  const daily = forecast.forecast.forecastday;
+  const hourly = weatherData.forecast.forecastday[0].hour
+    .filter(h => {
+      const hour = new Date(h.time).getHours();
+      return hour >= currentTime && hour <= currentTime + 12 && hour % 2 === 0;
+    })
+    .slice(0, 6);
+
+  const daily = weatherData.forecast.forecastday;
 
   return (
-    <div className="app">
-      {/* 상단: 흰색 영역 */}
+    <div className="app-container">
       <header className="header">
-        <select value={city} onChange={(e) => setCity(e.target.value)}>
-          {cities.map((c) => (
-            <option key={c}>{c}</option>
+        <h1>S-Forecast Lite</h1>
+        <select value={selectedCity} onChange={e => setSelectedCity(e.target.value)}>
+          {cities.map(c => (
+            <option key={c} value={c}>{c}</option>
           ))}
         </select>
-        <div className="now">
-          <h1>{forecast.current.temp_c.toFixed(1)}°</h1>
-          <p>{forecast.current.condition.text}</p>
-        </div>
       </header>
 
-      {/* 중간: 초록색 영역 */}
-      <main className="highlight">
-        <p>체감 {forecast.current.feelslike_c.toFixed(1)}°</p>
-        <p>습도 {forecast.current.humidity}% · 강수확률 {forecast.forecast.forecastday[0].day.daily_chance_of_rain}%</p>
-      </main>
-
-      {/* 하단: 검정색 영역 */}
-      <section className="bottom">
-        <div className="hourly">
+      <section className="hourly">
+        <h2>12시간 예보</h2>
+        <div className="hourly-grid">
           {hourly.map((h, i) => (
-            <div className="hour-box" key={i}>
-              <p>{new Date(h.time).getHours()}시</p>
-              <p>{h.condition.text}</p>
-              <p>{h.temp_c.toFixed(1)}°</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="daily">
-          {daily.map((d, i) => (
-            <div className="day-box" key={i}>
-              <p>{new Date(d.date).getDate()}일</p>
-              <p>{d.day.condition.text}</p>
-              <p>{d.day.maxtemp_c.toFixed(1)}° / {d.day.mintemp_c.toFixed(1)}°</p>
+            <div key={i} className="hour-card">
+              <div>{h.time.slice(11, 16)}</div>
+              <div>{h.temp_c}°</div>
+              <div>{h.condition.text}</div>
             </div>
           ))}
         </div>
       </section>
+
+      <section className="daily">
+        <h2>15일 예보</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>날씨</th>
+              <th>최고/최저</th>
+            </tr>
+          </thead>
+          <tbody>
+            {daily.map((d, i) => (
+              <tr key={i}>
+                <td>{d.date}</td>
+                <td>{d.day.condition.text}</td>
+                <td>{d.day.maxtemp_c}° / {d.day.mintemp_c}°</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <footer className="footer">© 2025 Glitch Factory</footer>
     </div>
   );
 }

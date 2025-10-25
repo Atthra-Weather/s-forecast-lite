@@ -1,92 +1,81 @@
 body {
   margin: 0;
-  font-family: "Pretendard", sans-serif;
+  font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif;
   background: #000;
   color: #fff;
 }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* 상단: 흰색 영역 */
+/* 레이아웃 구분 */
 .header {
   background: #fff;
   color: #000;
   text-align: center;
-  padding: 1.5rem 1rem;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.header select {
-  padding: 0.5rem;
-  border: none;
-  background: #f5f5f5;
-  border-radius: 6px;
-  font-size: 1rem;
-  margin-bottom: 1rem;
-}
-
-.now h1 {
-  font-size: 2.8rem;
-  margin: 0.2rem 0;
-}
-.now p {
-  font-size: 1rem;
-  opacity: 0.8;
-}
-
-/* 중간: 초록색 영역 */
-.highlight {
-  background: #00b050;
-  color: #fff;
-  text-align: center;
-  padding: 1.5rem 0;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-}
-
-/* 하단: 검정색 영역 */
-.bottom {
-  flex: 1;
-  background: #000;
-  padding: 1.5rem 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  padding: 1rem 0;
 }
 
 .hourly {
-  display: flex;
-  overflow-x: auto;
-  gap: 0.8rem;
-  padding-bottom: 0.5rem;
-}
-
-.hour-box {
-  flex: 0 0 auto;
-  background: #111;
-  border-radius: 10px;
-  padding: 0.8rem;
+  background: #00a676;
+  color: #fff;
+  padding: 1rem;
   text-align: center;
-  min-width: 70px;
+}
+
+.daily {
+  background: #000;
+  color: #fff;
+  padding: 1rem;
+}
+
+.footer {
+  text-align: center;
+  font-size: 0.8rem;
+  padding: 1rem 0;
+  color: #888;
+}
+
+/* 12시간 예보 카드 */
+.hourly-grid {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.hour-card {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  min-width: 60px;
+}
+
+/* 15일 표 */
+table {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.9rem;
 }
 
-.day-box {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.6rem 0;
-  border-bottom: 1px solid #222;
-  font-size: 0.9rem;
-  color: #ccc;
+th, td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 6px 8px;
+  text-align: center;
+}
+
+thead {
+  background: rgba(255, 255, 255, 0.05);
+  font-weight: bold;
+}
+
+select {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 .loading {
   text-align: center;
-  margin-top: 50%;
-  font-size: 1.1rem;
-  opacity: 0.8;
+  padding: 2rem;
 }
