@@ -21,7 +21,7 @@ const cityMap = {
   "도쿄": "Tokyo",
 };
 
-// ──────────── 나비에 기반 S-리듬 모델 ────────────
+// ───────────── S-Navier 리듬 모델 ─────────────
 function simulateSNavier(initTemp, initHumidity, days = 10) {
   const hours = days * 24;
   const dt = 1;
@@ -30,7 +30,7 @@ function simulateSNavier(initTemp, initHumidity, days = 10) {
   const omega = (2 * Math.PI) / 24;
   const beta = 10;
 
-  let rho = initTemp / 100; // 초기 밀도
+  let rho = initTemp / 100;
   const S = [];
   const Tseries = [];
   const Hseries = [];
@@ -41,12 +41,10 @@ function simulateSNavier(initTemp, initHumidity, days = 10) {
     const s = Math.abs(drho) ** 2;
     S.push(s);
 
-    // 온도 변환
     const temp = initTemp + beta * Math.sqrt(s) * Math.sin(omega * t);
     Tseries.push(temp);
 
-    // 습도 변환
-    const hum = initHumidity + 5 * (Math.sin(omega * t + Math.PI / 3));
+    const hum = initHumidity + 8 * Math.sin(omega * t + Math.PI / 3);
     Hseries.push(Math.max(0, Math.min(100, hum)));
   }
 
@@ -95,28 +93,34 @@ export default function App() {
       const model = simulateSNavier(initTemp, initHumidity, 10);
 
       const s_out = s_forecast_report(model.S);
-
-      // 10일치 예보 데이터 생성
       const today = new Date();
+
+      // 날짜별 변동 있는 예보 생성
       const daysData = Array.from({ length: 10 }, (_, i) => {
         const d = new Date(today);
         d.setDate(today.getDate() + i);
         const dateStr = d.toISOString().split("T")[0];
-        const base = Math.floor(model.Tavg + (Math.sin(i / 2) * 1.5));
+
+        const localS = model.S[i * 24] || model.S[0];
+        const humVar = 10 * Math.sin(i / 2 + Math.random() * 0.5);
+        const dayHumidity = Math.max(0, Math.min(100, model.Havg + humVar));
+
+        const condition =
+          localS < 0.0008 ? "맑음 ☀️" :
+          localS < 0.002 ? "구름 많음 🌤" :
+          localS < 0.005 ? "소나기 🌧" : "폭우 ⚡️";
+
         return {
           date: dateStr,
-          maxTemp: (base + (model.Tmax - model.Tavg) / 2).toFixed(1),
-          minTemp: (base - (model.Tavg - model.Tmin) / 2).toFixed(1),
-          avgTemp: base.toFixed(1),
-          humidity: model.Havg.toFixed(0),
-          condition:
-            s_out.state.includes("격렬") ? "폭우" :
-            s_out.state.includes("불안정") ? "소나기" :
-            s_out.state.includes("평형") ? "구름 많음" : "맑음",
+          maxTemp: (model.Tavg + Math.sqrt(localS) * 8).toFixed(1),
+          minTemp: (model.Tavg - Math.sqrt(localS) * 6).toFixed(1),
+          avgTemp: model.Tavg.toFixed(1),
+          humidity: dayHumidity.toFixed(0),
+          condition,
         };
       });
 
-      // 실시간 (3시간 단위 리듬 예보)
+      // 실시간 리듬 온도 예보
       const hourlyData = model.Tseries.slice(0, 24).map((t, i) => ({
         time: `${String(i).padStart(2, "0")}:00`,
         temp: t.toFixed(1),
