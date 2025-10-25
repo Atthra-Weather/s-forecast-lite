@@ -1,118 +1,139 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
+import "./App.css";
 
-export default function WeatherApp() {
-  const [city, setCity] = useState("서울");
-  const [data, setData] = useState([]);
-  const [current, setCurrent] = useState(null);
+const API_KEY = "74f3c722bf494188b92132611252510";
 
-  const cities = [
-    "서울", "안산", "안양", "용인", "수원", "인천", "강릉", "부산",
-    "오사카", "후쿠오카", "유후인", "마쓰야마", "사포로", "나고야"
-  ];
+const cities = [
+  { name: "서울", query: "Seoul" },
+  { name: "안산", query: "Ansan" },
+  { name: "안양", query: "Anyang" },
+  { name: "용인", query: "Yongin" },
+  { name: "수원", query: "Suwon" },
+  { name: "인천", query: "Incheon" },
+  { name: "강릉", query: "Gangneung" },
+  { name: "부산", query: "Busan" },
+  { name: "오사카", query: "Osaka" },
+  { name: "후쿠오카", query: "Fukuoka" },
+  { name: "유후인", query: "Yufuin" },
+  { name: "마쓰야마", query: "Matsuyama" },
+  { name: "사포로", query: "Sapporo" },
+  { name: "나고야", query: "Nagoya" },
+];
+
+function App() {
+  const [city, setCity] = useState(cities[0]);
+  const [hourly, setHourly] = useState([]);
+  const [daily, setDaily] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchWeather = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${city.query}&days=3&aqi=no&alerts=no`
+      );
+      const data = await res.json();
+      const now = new Date();
+
+      // 현재 시간부터 12시간까지만
+      const upcomingHours = data.forecast.forecastday
+        .flatMap((d) => d.hour)
+        .filter((h) => new Date(h.time) >= now)
+        .slice(0, 12);
+
+      const upcomingDays = data.forecast.forecastday.slice(1);
+
+      setHourly(upcomingHours);
+      setDaily(upcomingDays);
+    } catch (err) {
+      console.error("Error fetching weather:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchWeather = async () => {
-      try {
-        const res = await fetch(
-          `https://api.weatherapi.com/v1/forecast.json?key=YOUR_API_KEY&q=${city}&hours=24&lang=ko`
-        );
-        const json = await res.json();
-
-        // 현재 날씨 요약
-        setCurrent({
-          temp: Math.round(json.current.temp_c),
-          feels: Math.round(json.current.feelslike_c),
-          condition: json.current.condition.text,
-          humidity: json.current.humidity,
-          wind: json.current.wind_kph,
-          icon: getWeatherIcon(json.current.condition.text),
-        });
-
-        // 시간별 예보
-        const hourly = json.forecast.forecastday[0].hour.map((h) => ({
-          time: `${new Date(h.time).getHours()}시`,
-          icon: getWeatherIcon(h.condition.text),
-          temp: `${Math.round(h.temp_c)}°`,
-          rain: `${h.chance_of_rain}%`,
-          humidity: `${h.humidity}%`,
-        }));
-        setData(hourly);
-      } catch (err) {
-        console.error(err);
-      }
-    };
     fetchWeather();
   }, [city]);
 
-  const getWeatherIcon = (text) => {
-    const t = text.toLowerCase();
-    if (t.includes("rain") || t.includes("비")) return "🌧";
-    if (t.includes("cloud") || t.includes("구름")) return "☁️";
-    if (t.includes("snow") || t.includes("눈")) return "❄️";
-    if (t.includes("sun") || t.includes("clear") || t.includes("맑")) return "☀️";
-    return "🌤";
-  };
-
   return (
-    <div className="bg-black text-white min-h-screen p-4 font-sans">
-      <h1 className="text-xl font-bold mb-3">S-Forecast Lite</h1>
+    <div className="app">
+      <header>
+        <h1>S-Forecast Lite</h1>
+        <select
+          value={city.query}
+          onChange={(e) => {
+            const selected = cities.find((c) => c.query === e.target.value);
+            setCity(selected);
+          }}
+        >
+          {cities.map((c) => (
+            <option key={c.query} value={c.query}>
+              {c.name}
+            </option>
+          ))}
+        </select>
+      </header>
 
-      {/* 도시 선택 */}
-      <select
-        value={city}
-        onChange={(e) => setCity(e.target.value)}
-        className="bg-gray-800 text-white p-2 rounded mb-4"
-      >
-        {cities.map((c) => (
-          <option key={c}>{c}</option>
-        ))}
-      </select>
+      {loading ? (
+        <p className="loading">로딩 중...</p>
+      ) : (
+        <>
+          <section className="hourly">
+            <h2>12시간 예보</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>시간</th>
+                  <th>날씨</th>
+                  <th>온도</th>
+                  <th>체감</th>
+                  <th>강수%</th>
+                </tr>
+              </thead>
+              <tbody>
+                {hourly.map((h) => (
+                  <tr key={h.time}>
+                    <td>{new Date(h.time).getHours()}시</td>
+                    <td>
+                      <img
+                        src={h.condition.icon}
+                        alt={h.condition.text}
+                        className="icon"
+                      />
+                    </td>
+                    <td>{h.temp_c.toFixed(1)}°</td>
+                    <td>{h.feelslike_c.toFixed(1)}°</td>
+                    <td>{h.chance_of_rain || 0}%</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
 
-      {/* 현재 날씨 카드 */}
-      {current && (
-        <div className="bg-gray-900 p-4 rounded-lg mb-4 flex flex-col items-center">
-          <div className="text-5xl mb-2">{current.icon}</div>
-          <div className="text-3xl font-bold mb-1">
-            {city} | {current.temp}°C
-          </div>
-          <div className="text-sm text-gray-300 mb-1">
-            체감 {current.feels}°C · {current.condition}
-          </div>
-          <div className="text-xs text-gray-400">
-            습도 {current.humidity}% · 바람 {current.wind}km/h
-          </div>
-        </div>
+          <section className="daily">
+            <h2>다음날 요약</h2>
+            <div className="daily-cards">
+              {daily.map((d) => (
+                <div className="day-card" key={d.date}>
+                  <p className="date">{d.date}</p>
+                  <img
+                    src={d.day.condition.icon}
+                    alt={d.day.condition.text}
+                    className="icon-large"
+                  />
+                  <p>
+                    {d.day.maxtemp_c.toFixed(0)}° /{" "}
+                    {d.day.mintemp_c.toFixed(0)}°
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        </>
       )}
-
-      {/* 시간별 날씨 표 */}
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-center border-collapse">
-          <thead>
-            <tr className="border-b border-gray-700 text-gray-300 text-sm">
-              <th>시간</th>
-              <th>날씨</th>
-              <th>기온(°C)</th>
-              <th>강수확률(%)</th>
-              <th>습도(%)</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row, i) => (
-              <tr key={i} className="border-b border-gray-800 text-sm">
-                <td>{row.time}</td>
-                <td>{row.icon}</td>
-                <td>{row.temp}</td>
-                <td>{row.rain}</td>
-                <td>{row.humidity}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="text-center text-xs text-gray-600 mt-6">
-        데이터 제공: WeatherAPI.com | GlitchFactory S-Forecast Model
-      </p>
     </div>
   );
 }
+
+export default App;
