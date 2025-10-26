@@ -95,10 +95,10 @@ export default function App() {
 
       setHourly(next12h);
       setForecast(days);
-      setStatus("데이터 업데이트 완료");
+      setStatus("Last data update successful");
     } catch (e) {
       console.error(e);
-      setStatus("데이터 연결 제한 — 잠시 후 재시도");
+      setStatus("Connection limited — please retry later");
     }
   }
 

@@ -170,4 +170,11 @@ footer {
   line-height: 1.2;
   letter-spacing: 0.15px;
 }
+/* ---- status text (bottom info) ---- */
+.status-box p {
+  font-size: 0.5rem !important;   /* 더 작게, 약 11px */
+  color: #444 !important;         /* 중간 회색으로 부드럽게 */
+  font-weight: 300 !important;    /* 얇은 폰트 */
+  margin-top: 0.3rem;
+}
 
