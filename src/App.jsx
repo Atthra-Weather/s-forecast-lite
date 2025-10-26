@@ -60,58 +60,58 @@ export default function App() {
 
   return (
     <div className="App">
-      <h1>S-Forecast ver.2.8h</h1>
-
-      <div className="city-select">
-        <select value={city} onChange={(e) => setCity(e.target.value)}>
-          {Object.keys(CITY).map((c) => (
-            <option key={c}>{c}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="precision-box">
-        <p>
-          정밀도 (Precision): <b>{precision}</b>{" "}
-          {precision > 0.8 ? "고정밀" : precision > 0.6 ? "보통" : "낮음"}
+      <h2>S-Forecast ver.2.7h — 실시간 리듬 예보</h2>
+      {accuracy && (
+        <p style={{ fontSize: "14px", color: "#555" }}>
+          정밀도: <strong>{accuracy}%</strong>
         </p>
-      </div>
+      )}
 
-      <h2>12시간 리듬 예보 — {city}</h2>
-<div
-  className="hourly"
-  style={{
-    display: "flex",
-    flexWrap: "nowrap",
-    overflowX: "auto",
-    gap: "12px",
-    borderTop: "1px solid #ccc",
-    borderBottom: "1px solid #ccc",
-    padding: "10px 0",
-  }}
->
-  {hourly.length === 0 ? (
-    <p className="tiny">시간별 데이터를 불러오는 중…</p>
-  ) : (
-    hourly.map((h, i) => (
-      <React.Fragment key={i}>
-        <div
-          className="hour-box"
-          style={{
-            minWidth: "90px",
-            textAlign: "center",
-            borderRight: i < hourly.length - 1 ? "1px solid #ccc" : "none",
-            padding: "0 6px",
-          }}
-        >
-          <p className="tiny">{h.time}</p>
-          <p>{h.temp.toFixed(1)}°C</p>
-          <p className="tiny">{Math.round(h.humidity)}%</p>
-          <p className="tiny" style={{ color: "#666" }}>
-            {h.condition}
-          </p>
-        </div>
-      </React.Fragment>
-    ))
-  )}
-</div>
+      {/* 실시간 가로 레이아웃 */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "flex-start",
+          gap: "16px",
+          padding: "12px 0",
+          borderTop: "1px solid #ccc",
+          borderBottom: "1px solid #ccc",
+          overflowX: "auto",
+        }}
+      >
+        {Object.entries(weatherData).map(([city, data], idx, arr) => (
+          <React.Fragment key={city}>
+            <div
+              style={{
+                flex: "0 0 140px",
+                textAlign: "center",
+                borderRadius: "10px",
+                background: "#fafafa",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                padding: "10px 0",
+              }}
+            >
+              <h3 style={{ margin: "6px 0" }}>{city}</h3>
+              <p style={{ margin: 0, fontSize: "15px" }}>{data.temp}°C</p>
+              <p style={{ margin: 0 }}>{data.condition}</p>
+              <p style={{ margin: 0, fontSize: "13px", color: "#777" }}>
+                습도 {data.humidity}%
+              </p>
+            </div>
+
+            {idx < arr.length - 1 && (
+              <div
+                style={{
+                  width: "1px",
+                  backgroundColor: "#ccc",
+                  alignSelf: "stretch",
+                }}
+              />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
