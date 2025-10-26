@@ -160,21 +160,23 @@ footer {
   }
 }
 
+/* 날짜 텍스트 (상단 작게, 얇고 회색) */
 .tiny-date {
-  font-size: 0.65rem !important;   /* 약 10px 정도 크기 */
-  color: #222 !important;          /* 진한 블랙톤 */
-  font-weight: 300 !important;     /* 얇은 폰트 두께 */
-  text-align: center;
-  margin-top: 2px;
-  margin-bottom: 6px;
-  line-height: 1.2;
-  letter-spacing: 0.15px;
+  font-size: 0.72rem;   /* 0.75 → 0.72로 미세 축소 */
+  font-weight: 300;
+  color: #333;          /* 조금 더 짙은 회색으로 대비 강화 */
+  margin-top: -6px;     /* 상단 여백 살짝 줄임 */
+  margin-bottom: 10px;
+  letter-spacing: 0.2px; /* 숫자 시각 안정화 */
 }
-/* ---- status text (bottom info) ---- */
-.status-box p {
-  font-size: 0.5rem !important;   /* 더 작게, 약 11px */
-  color: #444 !important;         /* 중간 회색으로 부드럽게 */
-  font-weight: 300 !important;    /* 얇은 폰트 */
-  margin-top: 0.3rem;
+
+/* 상태 메시지 (하단 작게, 회색, 간격 균형 조정) */
+.status {
+  font-size: 0.68rem;   /* 0.7 → 0.68 */
+  font-weight: 300;
+  color: #666;          /* 더 은은한 회색 */
+  margin-top: 0.5rem;
+  letter-spacing: 0.3px;
 }
+
 

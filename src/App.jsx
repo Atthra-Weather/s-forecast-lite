@@ -1,4 +1,4 @@
-// App.jsx — S-Forecast ver.2.8 (10-Day Full Precision Edition)
+// App.jsx — S-Forecast ver.2.8-minimal (Compact English Edition)
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
@@ -23,12 +23,12 @@ export default function App() {
   const [city, setCity] = useState("수원");
   const [forecast, setForecast] = useState([]);
   const [hourly, setHourly] = useState([]);
-  const [status, setStatus] = useState("로딩 중…");
+  const [status, setStatus] = useState("Loading…");
 
-  const WEEK = ["일","월","화","수","목","금","토"];
+  const WEEK = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
   const dayStr = (iso) => {
     const d = new Date(iso);
-    return `${d.getMonth() + 1}월 ${d.getDate()}일 (${WEEK[d.getDay()]})`;
+    return `${d.getMonth() + 1}/${d.getDate()} (${WEEK[d.getDay()]})`;
   };
 
   function refineCondition(text) {
@@ -44,7 +44,7 @@ export default function App() {
     return "기타";
   }
 
-  // 🔹 비선형 S 계산식
+  // 🔹 Nonlinear S (Navier–CEF hybrid)
   function computeSPlus({ temp, humidity, wind = 0, cloud = 0 }) {
     const T0 = 20, H0 = 50;
     const sigmaT = 7, sigmaH = 15;
@@ -95,7 +95,7 @@ export default function App() {
 
       setHourly(next12h);
       setForecast(days);
-      setStatus("Last data update successful");
+      setStatus("Data updated successfully");
     } catch (e) {
       console.error(e);
       setStatus("Connection limited — please retry later");
@@ -105,7 +105,7 @@ export default function App() {
   useEffect(() => { fetchWeather(city); }, [city]);
 
   const today = new Date();
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")} 기준`;
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
 
   return (
     <div className="App">
@@ -118,24 +118,13 @@ export default function App() {
         </select>
       </div>
 
-      <p className="tiny-date">{todayStr} 기준</p>
-        {todayStr}
-      </p>
+      <p className="tiny-date">{todayStr}</p>
 
-      {/* 실시간 12시간 예보 */}
-      <div className="hourly" style={{ display:"flex", gap:"10px", overflowX:"auto", marginTop:"6px" }}>
+      <div className="hourly">
         {hourly.length === 0 ? (
-          <p className="tiny">데이터 불러오는 중…</p>
+          <p className="tiny">Loading data…</p>
         ) : hourly.map((h,i)=>(
-          <div key={i} style={{
-            flex:"0 0 110px",
-            background:"#f9f9f9",
-            borderRadius:"8px",
-            textAlign:"center",
-            padding:"5px",
-            boxShadow:"0 1px 3px rgba(0,0,0,0.1)",
-            fontSize:"12px"
-          }}>
+          <div key={i} className="hour-box">
             <p className="tiny">{h.time}</p>
             <p>{h.temp.toFixed(1)}°C / {h.humidity}%</p>
             <p>{h.condition}</p>
@@ -143,10 +132,9 @@ export default function App() {
         ))}
       </div>
 
-      {/* 10일 예보 표 */}
-      <table className="forecast" style={{ marginTop:"18px" }}>
+      <table className="forecast">
         <thead>
-          <tr><th>날짜(요일)</th><th>상태</th><th>최고 / 최저</th><th>습도(%)</th></tr>
+          <tr><th>Date</th><th>Condition</th><th>High / Low</th><th>Humidity (%)</th></tr>
         </thead>
         <tbody>
           {forecast.map((d, i) => (
@@ -160,9 +148,7 @@ export default function App() {
         </tbody>
       </table>
 
-      <div className="status-box">
-        <p>{status}</p>
-      </div>
+      <p className="status">{status}</p>
 
       <footer>
         <p>Glitch Factory — Adaptive Navier–CEF Hybrid Model</p>
