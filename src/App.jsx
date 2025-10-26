@@ -77,26 +77,41 @@ export default function App() {
         </p>
       </div>
 
-      <h3>실시간 12시간 예보</h3>
-
-      <div className="hourly-grid">
-        {hourly.map((h, i) => (
-          <div
-            key={i}
-            className="hour-cell"
-            style={{
-              borderRight:
-                i === hourly.length - 1 ? "none" : "1px solid rgba(180,180,180,0.4)",
-            }}
-          >
-            <p>{new Date(h.time).getHours()}시</p>
-            <p>
-              {h.temp_c.toFixed(1)}°C / {h.humidity}%
-            </p>
-            <p>{h.condition.text}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+      <h2>12시간 리듬 예보 — {city}</h2>
+<div
+  className="hourly"
+  style={{
+    display: "flex",
+    flexWrap: "nowrap",
+    overflowX: "auto",
+    gap: "12px",
+    borderTop: "1px solid #ccc",
+    borderBottom: "1px solid #ccc",
+    padding: "10px 0",
+  }}
+>
+  {hourly.length === 0 ? (
+    <p className="tiny">시간별 데이터를 불러오는 중…</p>
+  ) : (
+    hourly.map((h, i) => (
+      <React.Fragment key={i}>
+        <div
+          className="hour-box"
+          style={{
+            minWidth: "90px",
+            textAlign: "center",
+            borderRight: i < hourly.length - 1 ? "1px solid #ccc" : "none",
+            padding: "0 6px",
+          }}
+        >
+          <p className="tiny">{h.time}</p>
+          <p>{h.temp.toFixed(1)}°C</p>
+          <p className="tiny">{Math.round(h.humidity)}%</p>
+          <p className="tiny" style={{ color: "#666" }}>
+            {h.condition}
+          </p>
+        </div>
+      </React.Fragment>
+    ))
+  )}
+</div>
