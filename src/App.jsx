@@ -118,7 +118,7 @@ export default function App() {
         </select>
       </div>
 
-      <p className="tiny" style={{ textAlign:"center", marginTop:"4px", color:"#666", fontSize:"9px !important;" }}>
+      <p className="tiny-date">{todayStr} 기준</p>
         {todayStr}
       </p>
 
