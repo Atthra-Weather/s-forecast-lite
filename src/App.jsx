@@ -118,7 +118,7 @@ export default function App() {
         </select>
       </div>
 
-      <p className="tiny" style={{ textAlign:"center", marginTop:"4px", color:"#666" }}>
+      <p className="tiny" style={{ textAlign:"center", marginTop:"4px", color:"#666", fontSize:"7px" }}>
         {todayStr}
       </p>
 
