@@ -1,10 +1,11 @@
-// App.jsx — S-Forecast ver.2.7 (12시간 실시간)
+// App.jsx — S-Forecast ver.2.7β2 (Precision+ Edition)
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
 export default function App() {
   const API_KEY = "8370f7e693e34a79bdd180327252510";
 
+  // 🔹 도시 목록 (한글표시 + 위도/경도/고도)
   const CITY = {
     서울:   { name_en: "Seoul",      lat: 37.5665, lon: 126.9780, alt: 20 },
     수원:   { name_en: "Suwon",      lat: 37.2636, lon: 127.0286, alt: 30 },
@@ -34,42 +35,29 @@ export default function App() {
     return `${base} (${WEEK[d.getDay()]})`;
   };
 
+  // ===== Utility =====
   function microgrid(lat, lon, d = 0.03) {
     return [
       { lat, lon },
       { lat: lat + d, lon },
       { lat: lat - d, lon },
+      { lat, lon: lon - d },
+      { lat, lon: lon + d },
+      { lat: lat + d, lon: lon - d },
+      { lat: lat + d, lon: lon + d },
+      { lat: lat - d, lon: lon - d },
+      { lat: lat - d, lon: lon + d },
     ];
   }
-
-  function computeS({ temp, humidity, wind = 0, cloud = 0, lat = 35, alt = 0 }) {
-    const t = (temp - 15) / 12;
-    const h = (humidity - 60) / 20;
-    const w = (wind - 10) / 10;
-    const c = (cloud - 50) / 50;
-    const diurnal = Math.sin(temp / 7) * 0.6;
-    const interact = 0.4 * h * c + 0.25 * w * c;
-    let s = Math.abs(0.9*diurnal + 0.7*h + 0.5*c + 0.4*w + interact);
-    s *= (1 - alt/1000*0.05) * (1 + 0.002 * (lat - 35));
-    return Math.min(3, s * 1.2);
-  }
-
-  function labelFromS(S, isDaily=false) {
-    if (!isDaily) {
-      if (S<0.4) return "맑음";
-      if (S<0.75) return "흐림";
-      return "비";
-    }
-    if (S<0.30) return "맑음";
-    if (S<0.45) return "대체로 맑음";
-    if (S<0.60) return "가끔 구름 많음";
-    if (S<0.75) return "대체로 흐림";
-    if (S<0.90) return "비 또는 소나기";
-    return "비 또는 천둥";
-  }
+  const median = (arr) => {
+    if (!arr?.length) return 0;
+    const s = [...arr].sort((a,b)=>a-b);
+    const m = Math.floor(s.length/2);
+    return s.length % 2 ? s[m] : (s[m-1]+s[m])/2;
+  };
 
   function rainCorrection(rain, chance) {
-    if (rain < 0.1 && chance < 10) return 0; // UI에서만 “비 가능성 거의 없음” 처리
+    if (rain < 0.1 && chance < 10) return 0;
     return rain;
   }
 
@@ -82,29 +70,26 @@ export default function App() {
     return data;
   }
 
+  // ===== 데이터 병합 =====
   function mergeHourly(pointDatas) {
-    const key = pointDatas[0].forecast.forecastday[0].hour.map(h=>h.time);
-    return key.map((t, idx) => {
-      const slice = pointDatas.map(d => d.forecast.forecastday[0].hour[idx]);
-      const avg = (k) => slice.reduce((a,b)=>a+(b?.[k]??0),0)/slice.length;
+    const hours0 = pointDatas[0].forecast.forecastday[0].hour;
+    const keyTimes = hours0.map(h => h.time);
+    return keyTimes.map((t, idx) => {
+      const bucket = pointDatas.map(d => d.forecast.forecastday[0].hour[idx]);
+      const take = k => median(bucket.map(x => x?.[k] ?? 0));
       return {
         time: t,
-        temp_c: avg("temp_c"),
-        humidity: avg("humidity"),
-        wind_kph: avg("wind_kph"),
-        cloud: avg("cloud"),
-        precip_mm: avg("precip_mm"),
-        chance_of_rain: avg("chance_of_rain"),
+        temp_c: take("temp_c"),
+        humidity: take("humidity"),
+        wind_kph: take("wind_kph"),
+        cloud: take("cloud"),
+        precip_mm: take("precip_mm"),
+        chance_of_rain: take("chance_of_rain"),
+        dewpoint_c: take("dewpoint_c"),
+        pressure_mb: take("pressure_mb"),
       };
     });
   }
-
-  const smooth = (arr, key) =>
-    arr.map((v,i) => {
-      const prev = arr[i-1]?.[key] ?? v[key];
-      const next = arr[i+1]?.[key] ?? v[key];
-      return (prev + v[key] + next) / 3;
-    });
 
   function mergeDaily(pointDatas) {
     const days = pointDatas[0].forecast.forecastday.length;
@@ -128,11 +113,73 @@ export default function App() {
     return out;
   }
 
+  // ===== S 계산 모델 =====
+  function computeSPlus({
+    temp, humidity, wind = 0, cloud = 0,
+    dewpoint = null, pressure = null,
+    lat = 35, alt = 0, month = null, hour = null
+  }) {
+    const t = (temp - 15) / 12;
+    const h = (humidity - 60) / 20;
+    const w = (wind - 10) / 10;
+    const c = (cloud - 50) / 50;
+    const td = dewpoint ?? (temp - (100 - humidity)/5);
+    const spread = Math.max(0, (temp - td));
+    const spread_n = Math.min(1.5, spread / 6);
+    const p = pressure ?? 1013;
+    const p_dev = Math.max(0, (1016 - p) / 12);
+    const m = month ?? new Date().getMonth()+1;
+    const H = hour ?? new Date().getHours();
+    const nocturn = (H>=0 && H<=6)?0.9:1.0;
+    const seasonal = (m>=6 && m<=9)?1.05:1.0;
+    const diurnal = Math.sin(temp / 7) * 0.5;
+    const interact_hc = 0.6 * h * c;
+    const interact_wc = 0.25 * w * c;
+    const interact_sp = 0.35 * spread_n * c;
+    const interact_p  = 0.25 * p_dev  * c;
+    const interact = interact_hc + interact_wc + interact_sp + interact_p;
+    let s = Math.abs(
+      diurnal * 0.5 +
+      0.8 * h +
+      0.6 * c +
+      0.3 * w +
+      interact
+    );
+    s *= (1 - alt/1000*0.05) * (1 + 0.002 * (lat - 35));
+    s *= seasonal * nocturn;
+    return Math.min(3, s * 1.2);
+  }
+
+  function labelFromS(S, isDaily=false) {
+    if (!isDaily) {
+      if (S<0.4) return "맑음";
+      if (S<0.75) return "흐림";
+      return "비";
+    }
+    if (S<0.30) return "맑음";
+    if (S<0.45) return "대체로 맑음";
+    if (S<0.60) return "가끔 구름 많음";
+    if (S<0.75) return "대체로 흐림";
+    if (S<0.90) return "비 또는 소나기";
+    return "비 또는 천둥";
+  }
+
+  function emaSeries(arr, alpha = 0.25, key) {
+    const out = [];
+    let prev = null;
+    for (const v of arr) {
+      const x = key ? v[key] : v;
+      prev = prev == null ? x : alpha * x + (1 - alpha) * prev;
+      out.push(key ? { ...v, [key]: prev } : prev);
+    }
+    return out;
+  }
+
   function summarizeRhythm(days, lat, alt){
     if (!days?.length) return "데이터 없음";
     const Smean = days.reduce((a,d)=>{
       const T=d.day.avgtemp_c, H=d.day.avghumidity, W=d.day.maxwind_kph, C=50;
-      return a + computeS({temp:T, humidity:H, wind:W, cloud:C, lat, alt});
+      return a + computeSPlus({temp:T, humidity:H, wind:W, cloud:C, lat, alt});
     },0)/days.length;
     if (Smean<0.35) return "안정 — 대체로 맑음";
     if (Smean<0.55) return "평형 — 구름 많음";
@@ -140,6 +187,7 @@ export default function App() {
     return "활성 — 흐림 또는 비";
   }
 
+  // ===== 메인 fetch =====
   async function fetchWeather(cityKo) {
     try {
       const { name_en, lat, lon, alt } = CITY[cityKo];
@@ -150,26 +198,32 @@ export default function App() {
       const nowH = localNow.getHours();
 
       let hourlyMerged = mergeHourly(datas);
-      const temps = smooth(hourlyMerged, "temp_c");
-      const hums  = smooth(hourlyMerged, "humidity");
+      const withIndex = hourlyMerged.map((h, i) => ({ ...h, _i: i }));
 
-      // --- 12시간 실시간 ---
-      const next12 = hourlyMerged.filter(h=>{
+      const next12raw = withIndex.filter(h => {
         const hh = new Date(h.time.replace(" ","T")).getHours();
         const diff = (hh - nowH + 24) % 24;
         return diff >= 0 && diff < 12;
-      }).map((h,i) => {
-        const S = computeS({ temp:temps[i], humidity:hums[i], wind:h.wind_kph??0, cloud:h.cloud??0, lat, alt });
+      }).map(h => {
+        const S = computeSPlus({
+          temp: h.temp_c,
+          humidity: h.humidity,
+          wind: h.wind_kph ?? 0,
+          cloud: h.cloud ?? 0,
+          dewpoint: h.dewpoint_c ?? null,
+          pressure: h.pressure_mb ?? null,
+          lat, alt,
+          month: localNow.getMonth()+1,
+          hour:  new Date(h.time.replace(" ","T")).getHours(),
+        });
         const rain = rainCorrection(h.precip_mm ?? 0, h.chance_of_rain ?? 0);
         let condition = labelFromS(S,false);
-        if (rain === 0 && h.precip_mm > 0) {
-          condition = "대체로 흐림 (비 가능성 거의 없음)";
-        } else if (rain > 0) {
-          condition = "비";
-        }
-        return { time: h.time.slice(-5), temp: h.temp_c, humidity: h.humidity, condition };
+        if (rain === 0 && (h.precip_mm ?? 0) > 0) condition = "대체로 흐림 (비 가능성 거의 없음)";
+        else if (rain > 0) condition = "비";
+        return { time: h.time.slice(-5), temp: h.temp_c, humidity: h.humidity, S_raw: S, condition };
       });
 
+      const next12 = emaSeries(next12raw, 0.25, "S_raw");
       const daysMerged = mergeDaily(datas);
       const curr = {
         temp_c:    datas.reduce((a,d)=>a+(d.current?.temp_c??0),0)/datas.length,
@@ -192,9 +246,10 @@ export default function App() {
 
   useEffect(()=>{ fetchWeather(city); },[city]);
 
+  // ====== 렌더링 ======
   return (
     <div className="App">
-      <h1>S-Forecast ver.2.7</h1>
+      <h1>S-Forecast ver.2.7β2 — Precision+ Edition</h1>
 
       <div className="selector">
         <label>도시 선택: </label>
@@ -249,7 +304,7 @@ export default function App() {
       </div>
 
       <footer>
-        <p>Glitch Factory — Adaptive Navier Model</p>
+        <p>Glitch Factory — Adaptive Navier–CEF Hybrid Model</p>
       </footer>
     </div>
   );
