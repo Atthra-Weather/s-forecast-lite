@@ -21,42 +21,39 @@ export default function App() {
     마쓰야마:{ name_en: "Matsuyama", lat: 33.8393, lon: 132.7657, alt: 30 },
   };
 
- const [city, setCity] = useState("수원");
-  const [hourly, setHourly] = useState([]);
-  const [precision, setPrecision] = useState(0);
-
-  // 정밀도 계산 (온도·습도·운량 기반 간단 모델)
-  function computePrecision(temp, humidity, cloud) {
-    const T = Math.abs(temp - 20) / 15;
-    const H = Math.abs(humidity - 60) / 40;
-    const C = cloud / 100;
-    return Math.max(0, (1 - (T + H + C) / 3)).toFixed(2);
-  }
-
-  async function fetchWeather() {
-    const { lat, lon } = CITY[city];
-    const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${lat},${lon}&days=2&aqi=no&alerts=no`;
-    const res = await fetch(url);
-    const data = await res.json();
-
-    const hours = data.forecast.forecastday.flatMap((d) => d.hour);
-    const now = Date.now();
-    const next12 = hours.filter((h) => h.time_epoch * 1000 >= now).slice(0, 12);
-
-    const precVals = next12.map((h) =>
-      computePrecision(h.temp_c, h.humidity, h.cloud)
-    );
-    const avgPrecision =
-      precVals.reduce((a, b) => parseFloat(a) + parseFloat(b), 0) /
-      precVals.length;
-
-    setPrecision(avgPrecision.toFixed(2));
-    setHourly(next12);
-  }
+ const [weatherData, setWeatherData] = useState({});
+  const [accuracy, setAccuracy] = useState(null);
 
   useEffect(() => {
-    fetchWeather();
-  }, [city]);
+    const fetchData = async () => {
+      const results = {};
+      let accurateCount = 0;
+      let totalCount = 0;
+
+      for (const [kor, info] of Object.entries(CITIES)) {
+        const res = await fetch(
+          `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${info.lat},${info.lon}&lang=ko`
+        );
+        const data = await res.json();
+        results[kor] = {
+          temp: data.current.temp_c,
+          condition: data.current.condition.text,
+          humidity: data.current.humidity,
+        };
+
+        const cond = data.current.condition.text;
+        if (cond.includes("맑") || cond.includes("비") || cond.includes("흐림")) {
+          accurateCount++;
+        }
+        totalCount++;
+      }
+
+      setWeatherData(results);
+      setAccuracy(((accurateCount / totalCount) * 100).toFixed(1));
+    };
+
+    fetchData();
+  }, []);
 
   return (
     <div className="App">
