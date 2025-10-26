@@ -1,12 +1,14 @@
-// App.jsx — S-Forecast ver.2.8r-Fix (Real-Time 12h Horizontal + Guards)
+  // App.jsx — S-Forecast ver.2.7 (12-Hour Precision Edition)
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
 export default function App() {
-  const API_KEY = "YOUR_WEATHERAPI_KEY"; // 🔐 키 넣어주세요
+  const API_KEY = "8370f7e693e34a79bdd180327252510";
+  const [city, setCity] = useState("서울");
+  const [forecast, setForecast] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  // 사용자가 주신 도시 세트 (원하는 만큼 추가/수정 가능)
-  const CITIES = {
+  const CITY = {
     서울:    { name_en: "Seoul",     lat: 37.5665, lon: 126.9780, alt: 20 },
     수원:    { name_en: "Suwon",     lat: 37.2636, lon: 127.0286, alt: 30 },
     용인:    { name_en: "Yongin",    lat: 37.2753, lon: 127.1159, alt: 70 },
@@ -21,147 +23,86 @@ export default function App() {
     마쓰야마:{ name_en: "Matsuyama", lat: 33.8393, lon: 132.7657, alt: 30 },
   };
 
-  const [cards, setCards] = useState([]);     // 도시별 카드 데이터 배열
-  const [error, setError] = useState(null);   // 전역 오류 표시
+  const fetchForecast = async () => {
+    setLoading(true);
+    const { lat, lon } = CITY[city];
+    const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${lat},${lon}&hours=12&aqi=no&alerts=no`;
+    const res = await fetch(url);
+    const data = await res.json();
+    setForecast(data);
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const entries = Object.entries(CITIES);
+    fetchForecast();
+    // eslint-disable-next-line
+  }, [city]);
 
-        const results = await Promise.all(entries.map(async ([kor, info]) => {
-          try {
-            const url = `https://api.weatherapi.com/v1/forecast.json?key=${API_KEY}&q=${info.lat},${info.lon}&days=2&aqi=no&alerts=no&lang=ko`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const data = await res.json();
+  const navierRhythm = (temp, humidity, wind, cloud) => {
+    // Adaptive Navier Rhythm Model (normalized)
+    const S = (0.4 * temp + 0.3 * humidity - 0.2 * wind + 0.1 * cloud) / 100;
+    return S.toFixed(2);
+  };
 
-            // 응답 가드
-            const current = data?.current;
-            const forecast = data?.forecast?.forecastday;
-            if (!current || !forecast || !forecast[0]?.hour) {
-              return { city: kor, error: "데이터 부족" };
-            }
+  if (loading) return <div className="loading">로딩 중...</div>;
+  if (!forecast) return <div>데이터 없음</div>;
 
-            // 오늘+내일 시간 배열 이어붙이기
-            const hoursAll = forecast.flatMap(d => d.hour || []);
-            // 지역 현지 시각(epoch) 기준으로 현재 이후 12개 연속 추출
-            const baseEpochSec = data?.location?.localtime_epoch ?? Math.floor(Date.now()/1000);
-            const next12 = hoursAll
-              .filter(h => (h?.time_epoch ?? 0) >= baseEpochSec)
-              .slice(0, 12)
-              .map(h => ({
-                time: h?.time ? h.time.split(" ")[1] : "--:--",
-                temp: typeof h?.temp_c === "number" ? h.temp_c : NaN,
-                cond: h?.condition?.text || "-",
-                humidity: typeof h?.humidity === "number" ? h.humidity : NaN,
-              }));
-
-            // 카드 데이터 구성
-            return {
-              city: kor,
-              nowTemp: current?.temp_c,
-              nowCond: current?.condition?.text,
-              nowHum: current?.humidity,
-              hours: next12,
-            };
-          } catch (e) {
-            return { city: kor, error: e.message || "도시 요청 실패" };
-          }
-        }));
-
-        setCards(results);
-      } catch (e) {
-        setError(e.message || "네트워크 오류");
-      }
-    };
-
-    fetchAll();
-  }, []);
+  const now = new Date();
+  const twelveHours = forecast.forecast.forecastday[0].hour.filter((h) => {
+    const t = new Date(h.time);
+    const diff = (t - now) / (1000 * 60 * 60);
+    return diff >= 0 && diff <= 12 && (Math.round(diff) % 6 === 0);
+  });
 
   return (
-    <div className="App" style={{ padding: 16 }}>
-      <h2 style={{ margin: "0 0 8px" }}>S-Forecast ver.2.8r — 실시간(가로) 12시간</h2>
-      {error && <p style={{ color: "crimson" }}>오류: {error}</p>}
+    <div className="App">
+      <h1>S-Forecast ver.2.7 — 12시간 정밀판</h1>
 
-      {/* 가로 스크롤 컨테이너 */}
-      <div
-        style={{
-          display: "flex",
-          gap: 16,
-          overflowX: "auto",
-          padding: "12px 8px",
-          borderTop: "1px solid #ddd",
-          borderBottom: "1px solid #ddd",
-        }}
-      >
-        {cards.map((card, idx) => (
-          <React.Fragment key={card.city}>
-            <div
-              style={{
-                flex: "0 0 260px",
-                borderRadius: 12,
-                background: "#fafafa",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                padding: 12,
-                textAlign: "center",
-              }}
-            >
-              <h3 style={{ margin: "4px 0 8px" }}>{card.city}</h3>
-
-              {/* 현재 */}
-              {card.error ? (
-                <p style={{ color: "#c00", margin: 0 }}>로드 실패: {card.error}</p>
-              ) : (
-                <>
-                  <p style={{ margin: 0, fontSize: 15 }}>
-                    {typeof card.nowTemp === "number" ? `${card.nowTemp.toFixed(1)}°C` : "--"}
-                  </p>
-                  <p style={{ margin: 0 }}>{card.nowCond || "-"}</p>
-                  <p style={{ margin: 0, fontSize: 13, color: "#666" }}>
-                    습도 {typeof card.nowHum === "number" ? card.nowHum : "--"}%
-                  </p>
-
-                  {/* 12시간 가로 리스트 */}
-                  <div
-                    style={{
-                      marginTop: 8,
-                      display: "flex",
-                      gap: 8,
-                      overflowX: "auto",
-                      justifyContent: "center",
-                    }}
-                  >
-                    {(card.hours && card.hours.length ? card.hours : Array.from({ length: 12 }, () => null))
-                      .map((h, i) => (
-                        <div
-                          key={i}
-                          style={{
-                            minWidth: 60,
-                            border: "1px solid #e0e0e0",
-                            borderRadius: 8,
-                            padding: "6px 4px",
-                            background: "#fff",
-                          }}
-                        >
-                          <p style={{ margin: 0, fontSize: 11 }}>{h ? h.time : "--:--"}</p>
-                          <p style={{ margin: 0, fontSize: 12 }}>
-                            {h && typeof h.temp === "number" ? `${h.temp.toFixed(0)}°` : "-"}
-                          </p>
-                          <p style={{ margin: 0, fontSize: 10, color: "#555" }}>{h ? h.cond : "-"}</p>
-                        </div>
-                      ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* 카드 사이 구분선 */}
-            {idx < cards.length - 1 && (
-              <div style={{ width: 1, background: "#d9d9d9", alignSelf: "stretch" }} />
-            )}
-          </React.Fragment>
+      <select value={city} onChange={(e) => setCity(e.target.value)}>
+        {Object.keys(CITY).map((c) => (
+          <option key={c}>{c}</option>
         ))}
+      </select>
+
+      <h2>{city} 실시간 리듬 예보</h2>
+      <p>
+        {new Date(forecast.current.last_updated).toLocaleString()} 기준
+      </p>
+
+      <div className="current">
+        <p>온도: {forecast.current.temp_c}°C</p>
+        <p>습도: {forecast.current.humidity}%</p>
+        <p>풍속: {forecast.current.wind_kph}km/h</p>
+        <p>구름: {forecast.current.cloud}%</p>
+        <p>
+          리듬 S:{" "}
+          {navierRhythm(
+            forecast.current.temp_c,
+            forecast.current.humidity,
+            forecast.current.wind_kph,
+            forecast.current.cloud
+          )}
+        </p>
+      </div>
+
+      <h2>12시간 리듬 예보 (6시간 간격)</h2>
+      <div className="forecast-grid">
+        {twelveHours.map((h, idx) => {
+          const time = new Date(h.time);
+          const S = navierRhythm(h.temp_c, h.humidity, h.wind_kph, h.cloud);
+          const P_rain = 0.5 * h.humidity + 0.3 * h.cloud + 0.2 * h.wind_kph;
+          const label = P_rain / 100 > 0.55 ? "비 가능성 있음" : "비 가능성 낮음";
+          return (
+            <div key={idx} className="forecast-item">
+              <h3>{time.getHours()}시</h3>
+              <p>온도 {h.temp_c}°C</p>
+              <p>습도 {h.humidity}%</p>
+              <p>구름 {h.cloud}%</p>
+              <p>리듬 S={S}</p>
+              <p className="label">{label}</p>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
