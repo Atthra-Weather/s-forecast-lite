@@ -1,32 +1,12 @@
-cat > index.html << 'EOF'
 <!DOCTYPE html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <!-- 기본 PWA 메타 -->
     <title>S-Forecast</title>
-    <link rel="manifest" href="manifest.json" />
-    <meta name="theme-color" content="#ffffff" />
-    <meta name="description" content="S-Forecast — Adaptive Navier Rhythm Weather App" />
-
-    <!-- iOS 전용 설정 -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="S-Forecast" />
-    <link rel="apple-touch-icon" href="icons/icon-512.png" />
-
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
-    <link rel="shortcut icon" href="icons/icon-192.png" />
   </head>
-
   <body>
-    <noscript>이 앱을 실행하려면 JavaScript가 필요합니다.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
-EOF
-
