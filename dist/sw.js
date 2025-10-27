@@ -1,1 +1,33 @@
-if(!self.define){let e,i={};const n=(n,s)=>(n=new URL(n+".js",s).href,i[n]||new Promise(i=>{if("document"in self){const e=document.createElement("script");e.src=n,e.onload=i,document.head.appendChild(e)}else e=n,importScripts(n),i()}).then(()=>{let e=i[n];if(!e)throw new Error(`Module ${n} didn’t register its module`);return e}));self.define=(s,r)=>{const o=e||("document"in self?document.currentScript.src:"")||location.href;if(i[o])return;let d={};const c=e=>n(e,o),t={module:{uri:o},exports:d,require:c};i[o]=Promise.all(s.map(e=>t[e]||c(e))).then(e=>(r(...e),d))}}define(["./workbox-5ffe50d4"],function(e){"use strict";self.skipWaiting(),e.clientsClaim(),e.precacheAndRoute([{url:"assets/index-CGM1KKp_.js",revision:null},{url:"assets/index-FtZFEd-G.css",revision:null},{url:"icons/icon-192.png",revision:"c0a1553add9374ff1a3d8164d198cd62"},{url:"icons/icon-512.png",revision:"8232423af5a651aea1686fd989f919ad"},{url:"index.html",revision:"fc1014f93bf97a89a187d1a46832fbeb"},{url:"manifest.json",revision:"91be29afe1c60c4638400099890642c3"},{url:"registerSW.js",revision:"1872c500de691dce40960bb85481de07"},{url:"service-worker.js",revision:"bb30175e00f317741236aea8428c68d9"},{url:"icons/icon-192.png",revision:"c0a1553add9374ff1a3d8164d198cd62"},{url:"icons/icon-512.png",revision:"8232423af5a651aea1686fd989f919ad"},{url:"manifest.webmanifest",revision:"b00655806b464e4eb8e6d8d802829e50"}],{}),e.cleanupOutdatedCaches(),e.registerRoute(new e.NavigationRoute(e.createHandlerBoundToURL("index.html")))});
+// sw.js — v3.0-refresh
+const CACHE_NAME = "s-forecast-v3-cache";
+const URLS_TO_CACHE = ["/", "/index.html", "/manifest.webmanifest"];
+
+self.addEventListener("install", (event) => {
+  console.log("⚙️ [ServiceWorker] Installing new version 3.0-refresh");
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE))
+  );
+  self.skipWaiting(); // ✅ 즉시 활성화
+});
+
+self.addEventListener("activate", (event) => {
+  console.log("♻️ [ServiceWorker] Clearing old caches...");
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(
+        keys
+          .filter((key) => key !== CACHE_NAME)
+          .map((key) => caches.delete(key))
+      )
+    )
+  );
+  self.clients.claim(); // ✅ 새 버전 즉시 적용
+});
+
+self.addEventListener("fetch", (event) => {
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      return response || fetch(event.request);
+    })
+  );
+});

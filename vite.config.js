@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  base: "/", // ✅ 반드시 추가 (루트 기준)
+  base: "/",
   plugins: [
     react(),
     VitePWA({
@@ -19,8 +19,9 @@ export default defineConfig({
         theme_color: "#0a84ff",
         background_color: "#f7f7f7",
         display: "standalone",
-        start_url: "/",
+        start_url: "/?v=3.0",
         scope: "/",
+        version: "3.0.0-refresh", // ✅ 캐시 강제 무효화용
         icons: [
           { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" }
@@ -28,8 +29,16 @@ export default defineConfig({
       },
       workbox: {
         cleanupOutdatedCaches: true,
-        globDirectory: "dist",
-        globPatterns: ["**/*.{js,css,html,png,svg,ico,json}"]
+        runtimeCaching: [
+          {
+            urlPattern: /\/$/,
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "s-forecast-v3-cache",
+              expiration: { maxEntries: 50, maxAgeSeconds: 86400 }
+            }
+          }
+        ]
       },
       devOptions: {
         enabled: true,
