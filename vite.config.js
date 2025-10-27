@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: "autoUpdate",
       injectRegister: "auto",
       filename: "sw.js",
-      strategies: "generateSW",
       outDir: "dist",
+      strategies: "generateSW",
       manifest: {
         name: "S-Forecast",
         short_name: "SForecast",
@@ -19,26 +19,19 @@ export default defineConfig({
         theme_color: "#0a84ff",
         background_color: "#f7f7f7",
         display: "standalone",
-        start_url: "/?v=3.0",
+        start_url: "/?v=3.0-refresh",
         scope: "/",
-        version: "3.0.0-refresh", // ✅ 캐시 강제 무효화용
+        version: "3.0-refresh", // ✅ 새 버전 추가
         icons: [
           { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" }
         ]
       },
       workbox: {
+        cacheId: "s-forecast-v3-cache", // ✅ 캐시명도 변경
         cleanupOutdatedCaches: true,
-        runtimeCaching: [
-          {
-            urlPattern: /\/$/,
-            handler: "NetworkFirst",
-            options: {
-              cacheName: "s-forecast-v3-cache",
-              expiration: { maxEntries: 50, maxAgeSeconds: 86400 }
-            }
-          }
-        ]
+        globDirectory: "dist",
+        globPatterns: ["**/*.{js,css,html,png,svg,ico,json}"]
       },
       devOptions: {
         enabled: true,
