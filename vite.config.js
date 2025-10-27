@@ -3,14 +3,13 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
-  base: "/", // ✅ 반드시 추가 (루트 기준 경로)
+  base: "/", // ✅ 반드시 추가 (루트 기준)
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",
-      filename: "sw.js",  // ✅ 일치하게
- // ✅ 루트 이름 고정
+      filename: "sw.js",
       strategies: "generateSW",
       outDir: "dist",
       manifest: {

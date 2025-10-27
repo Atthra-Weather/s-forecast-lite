@@ -92,10 +92,10 @@ export default function App() {
   }
 
   function interpretRhythm(S) {
-    if (S < 0.8) return "안정 — 리듬이 평형을 유지 중";
-    if (S < 1.2) return "평형 — 구름 많고 완만한 진동";
-    if (S < 2.0) return "불안정 — 대기 교호 상승, 비 가능성↑";
-    return "초과활성 — 급격한 리듬 전환, 폭풍·강풍 주의";
+    if (S < 0.8) return ""; // 안정 상태 — 표시하지 않음
+    if (S < 1.2) return ""; // 평형 상태 — 표시하지 않음
+    if (S < 2.0) return "비 가능성↑";
+    return "폭풍·강풍 주의";
   }
 
   // -----------------------------
