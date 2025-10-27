@@ -1,4 +1,4 @@
-// App.jsx — S-Forecast ver.2.8-minimal (Compact English Edition)
+// App.jsx — S-Forecast ver.2.8-wind-m (Compact English Edition + Wind m/s)
 import React, { useEffect, useState } from "react";
 import "./App.css";
 
@@ -77,6 +77,7 @@ export default function App() {
           temp: h.temp_c,
           humidity: h.humidity,
           condition: refineCondition(h.condition.text),
+          wind_mps: h.wind_kph / 3.6,   // ✅ 추가: 풍속 m/s
           S: computeSPlus({
             temp: h.temp_c,
             humidity: h.humidity,
@@ -109,7 +110,7 @@ export default function App() {
 
   return (
     <div className="App">
-      <h1>S-Forecast ver.2.8</h1>
+      <h1>S-Forecast ver.2.8-wind-m</h1>
 
       <div className="selector">
         <label>도시 선택: </label>
@@ -128,6 +129,7 @@ export default function App() {
             <p className="tiny">{h.time}</p>
             <p>{h.temp.toFixed(1)}°C / {h.humidity}%</p>
             <p>{h.condition}</p>
+            <p className="tiny">풍속 {h.wind_mps.toFixed(1)} m/s</p> {/* ✅ 추가 */}
           </div>
         ))}
       </div>
