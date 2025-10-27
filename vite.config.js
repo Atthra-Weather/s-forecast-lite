@@ -3,24 +3,25 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  base: "/", // ✅ 반드시 추가 (루트 기준 경로)
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: [
-        "favicon.ico",
-        "apple-touch-icon.png",
-        "icons/icon-192.png",
-        "icons/icon-512.png"
-      ],
+      injectRegister: "auto",
+      filename: "sw.js",  // ✅ 일치하게
+ // ✅ 루트 이름 고정
+      strategies: "generateSW",
+      outDir: "dist",
       manifest: {
         name: "S-Forecast",
         short_name: "SForecast",
-        description: "Adaptive Navier–CEF Hybrid Weather Rhythm App",
+        description: "Adaptive Navier–Riemann Hybrid Weather Rhythm App",
         theme_color: "#0a84ff",
         background_color: "#f7f7f7",
         display: "standalone",
         start_url: "/",
+        scope: "/",
         icons: [
           { src: "icons/icon-192.png", sizes: "192x192", type: "image/png" },
           { src: "icons/icon-512.png", sizes: "512x512", type: "image/png" }
@@ -28,11 +29,13 @@ export default defineConfig({
       },
       workbox: {
         cleanupOutdatedCaches: true,
-        globPatterns: ["**/*.{js,css,html,png,svg,ico,json}"],
+        globDirectory: "dist",
+        globPatterns: ["**/*.{js,css,html,png,svg,ico,json}"]
       },
       devOptions: {
-        enabled: true, // 개발 모드에서도 PWA 확인 가능
-      },
-    }),
-  ],
+        enabled: true,
+        type: "module"
+      }
+    })
+  ]
 });
